@@ -1,0 +1,317 @@
+2026-01-30 18:10:29 [ERROR] tor_calculator: Fatal error
+Traceback (most recent call last):
+  File "c:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 284, in main
+    _check_node_version(18, logger)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "c:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 103, in _check_node_version
+    raise RuntimeError(
+        f"Node.js {out} is too old for this UI. Install Node.js >= {min_major} (recommended: 20 LTS)."
+    )
+RuntimeError: Node.js v16.14.0 is too old for this UI. Install Node.js >= 18 (recommended: 20 LTS).
+2026-01-30 18:18:33 [ERROR] tor_calculator: Fatal error
+Traceback (most recent call last):
+  File "C:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 284, in main
+    _check_node_version(18, logger)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 103, in _check_node_version
+    raise RuntimeError(
+        f"Node.js {out} is too old for this UI. Install Node.js >= {min_major} (recommended: 20 LTS)."
+    )
+RuntimeError: Node.js v16.14.0 is too old for this UI. Install Node.js >= 18 (recommended: 20 LTS).
+2026-01-30 18:21:43 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 18:21:43 [INFO] tor_calculator: Starting UI server: npm --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run start -- -p 3000
+2026-01-30 18:21:43 [ERROR] tor_calculator: Fatal error
+Traceback (most recent call last):
+  File "c:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 286, in main
+    node_proc = start_next_server(ui_dir=UI_DIR, port=args.port, dev=dev, logger=logger)
+  File "c:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 137, in start_next_server
+    proc = subprocess.Popen(
+        cmd,
+    ...<8 lines>...
+        bufsize=1,
+    )
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\subprocess.py", line 1554, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+                             # no special security
+                             ^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+                             cwd,
+                             ^^^^
+                             startupinfo)
+                             ^^^^^^^^^^^^
+FileNotFoundError: [WinError 2] Не удается найти указанный файл
+2026-01-30 18:24:16 [WARNING] tor_calculator: UI production build not found ("ui/.next"). Falling back to dev mode.
+2026-01-30 18:24:16 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 18:24:16 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3000
+2026-01-30 18:24:16 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:16 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 18:24:16 [INFO] tor_calculator: [ui] > next dev -p 3000
+2026-01-30 18:24:16 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]  ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]  We detected multiple lockfiles and selected the directory of C:\Users\User\package-lock.json as the root directory.
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]  To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]  Detected additional lockfiles:
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    * C:\Users\User\Documents\projects_triazov\tor-calculator\ui\pnpm-lock.yaml
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10 (Turbopack)
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3000
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3000
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] This information is used to shape Next.js' roadmap and prioritize features.
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] https://nextjs.org/telemetry
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    	- include was updated to add '.next/dev/types/**/*.ts'
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    The following mandatory changes were made to your tsconfig.json:
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui]    	- jsx was set to react-jsx (next.js uses the React automatic runtime)
+2026-01-30 18:24:17 [INFO] tor_calculator: [ui] 
+2026-01-30 18:24:18 [INFO] tor_calculator: [ui]  ✓ Ready in 692ms
+2026-01-30 18:24:19 [ERROR] tor_calculator: Fatal error
+Traceback (most recent call last):
+  File "c:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 327, in main
+    window.expose(api)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\User\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\webview\window.py", line 534, in expose
+    raise TypeError('Parameter must be a function')
+TypeError: Parameter must be a function
+2026-01-30 18:26:19 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 18:26:19 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run start -- -p 3000
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui] 
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 start
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui] > next start -p 3000
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui] 
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3000
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3000
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui] 
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]  ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]  We detected multiple lockfiles and selected the directory of C:\Users\User\package-lock.json as the root directory.
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]  To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]    See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]  Detected additional lockfiles:
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]    * C:\Users\User\Documents\projects_triazov\tor-calculator\ui\pnpm-lock.yaml
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui] 
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui] Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+2026-01-30 18:26:20 [INFO] tor_calculator: [ui]     at ignore-listed frames
+2026-01-30 18:28:18 [WARNING] tor_calculator: UI production build not found (expected "ui/.next/BUILD_ID"). Falling back to dev mode.
+2026-01-30 18:28:18 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 18:28:18 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3000
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui] 
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui] > next dev -p 3000
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui] 
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]  ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]  We detected multiple lockfiles and selected the directory of C:\Users\User\package-lock.json as the root directory.
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]  To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]    See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]  Detected additional lockfiles:
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]    * C:\Users\User\Documents\projects_triazov\tor-calculator\ui\pnpm-lock.yaml
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui] 
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10 (Turbopack)
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3000
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3000
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui] 
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 18:28:19 [INFO] tor_calculator: [ui] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2026-01-30 18:28:20 [INFO] tor_calculator: [ui]  ✓ Ready in 581ms
+2026-01-30 18:28:23 [INFO] tor_calculator: [ui]  GET / 200 in 1794ms (compile: 1657ms, render: 137ms)
+2026-01-30 18:28:23 [INFO] tor_calculator: [ui]  ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+2026-01-30 18:28:23 [INFO] tor_calculator: [ui] Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+2026-01-30 18:28:23 [ERROR] tor_calculator: Failed to open devtools on startup
+Traceback (most recent call last):
+  File "c:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 341, in on_loaded
+    window.show_devtools()
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Window' object has no attribute 'show_devtools'
+2026-01-30 18:30:19 [INFO] tor_calculator: Window closed -> stopping UI server...
+2026-01-30 18:40:43 [DEBUG] tor_calculator: Logging initialized. debug=True log_file=C:\Users\User\Documents\projects_triazov\tor-calculator\debug.log
+2026-01-30 18:40:43 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 18:40:43 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3000
+2026-01-30 18:40:43 [DEBUG] tor_calculator: Port is open: localhost:3000
+2026-01-30 18:40:44 [INFO] tor_calculator: Test auth enabled: 2 accounts ensured.
+2026-01-30 18:40:44 [INFO] tor_calculator: [ui] 
+2026-01-30 18:40:44 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 18:40:44 [INFO] tor_calculator: [ui] > next dev -p 3000
+2026-01-30 18:40:44 [INFO] tor_calculator: [ui] 
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui]  ⨯ Failed to start server
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui] C:\Users\User\Documents\projects_triazov\tor-calculator\ui\node_modules\next\dist\server\lib\start-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui] C:\Users\User\Documents\projects_triazov\tor-calculator\ui\node_modules\next\dist\trace\trace.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui] Error: listen EADDRINUSE: address already in use :::3000
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui]     at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui]     at new Promise (<anonymous>) {
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui]   code: 'EADDRINUSE',
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui]   errno: -4091,
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui]   syscall: 'listen',
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui]   address: '::',
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui]   port: 3000
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui] }
+2026-01-30 18:40:46 [INFO] tor_calculator: [ui] [?25h
+2026-01-30 18:42:55 [WARNING] tor_calculator: UI production build not found (expected "ui/.next/BUILD_ID"). Falling back to dev mode.
+2026-01-30 18:42:55 [WARNING] tor_calculator: UI port localhost:3000 is already in use. Assuming UI server is already running; not starting a new one.
+2026-01-30 18:42:55 [INFO] tor_calculator: Test auth enabled: 2 accounts ensured.
+2026-01-30 18:47:57 [DEBUG] tor_calculator: Logging initialized. debug=True log_file=C:\Users\User\Documents\projects_triazov\tor-calculator\debug.log
+2026-01-30 18:47:59 [WARNING] tor_calculator: UI port localhost:3000 is already in use but does not respond to HTTP. Picking another port.
+2026-01-30 18:48:00 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 18:48:00 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3001
+2026-01-30 18:48:01 [INFO] tor_calculator: [ui] 
+2026-01-30 18:48:01 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 18:48:01 [INFO] tor_calculator: [ui] > next dev -p 3001
+2026-01-30 18:48:01 [INFO] tor_calculator: [ui] 
+2026-01-30 18:48:02 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10 (Turbopack)
+2026-01-30 18:48:02 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3001
+2026-01-30 18:48:02 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3001
+2026-01-30 18:48:02 [INFO] tor_calculator: [ui] 
+2026-01-30 18:48:02 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 18:48:02 [INFO] tor_calculator: [ui] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2026-01-30 18:48:04 [INFO] tor_calculator: [ui]  ⨯ Unable to acquire lock at C:\Users\User\Documents\projects_triazov\tor-calculator\ui\.next\dev\lock, is another instance of next dev running?
+2026-01-30 18:48:04 [INFO] tor_calculator: [ui]    Suggestion: If you intended to restart next dev, terminate the other process, and then try again.
+2026-01-30 18:48:04 [INFO] tor_calculator: [ui] [?25h
+2026-01-30 18:48:32 [ERROR] tor_calculator: Fatal error
+Traceback (most recent call last):
+  File "C:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 584, in main
+    wait_for_http(args.host, port, args.ui_timeout, logger)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\Documents\projects_triazov\tor-calculator\app.py", line 107, in wait_for_http
+    raise TimeoutError(f"UI server did not become healthy in time ({host}:{port})")
+TimeoutError: UI server did not become healthy in time (localhost:3001)
+2026-01-30 18:50:54 [DEBUG] tor_calculator: Logging initialized. debug=True log_file=C:\Users\User\Documents\projects_triazov\tor-calculator\debug.log
+2026-01-30 18:50:56 [WARNING] tor_calculator: Next dev lock is present but UI at localhost:3000 is not responding. Trying to recover...
+2026-01-30 18:50:58 [WARNING] tor_calculator: Killed PID 444. taskkill output: �ᯥ譮: �����, � �����䨪��஬ 444, ���୨� ����� 27616, �� �����襭.
+2026-01-30 18:50:59 [WARNING] tor_calculator: Removed stale Next dev lock: C:\Users\User\Documents\projects_triazov\tor-calculator\ui\.next\dev\lock
+2026-01-30 18:51:00 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 18:51:00 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3000
+2026-01-30 18:51:01 [INFO] tor_calculator: [ui] 
+2026-01-30 18:51:01 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 18:51:01 [INFO] tor_calculator: [ui] > next dev -p 3000
+2026-01-30 18:51:01 [INFO] tor_calculator: [ui] 
+2026-01-30 18:51:02 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10 (Turbopack)
+2026-01-30 18:51:02 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3000
+2026-01-30 18:51:02 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3000
+2026-01-30 18:51:02 [INFO] tor_calculator: [ui] 
+2026-01-30 18:51:02 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 18:51:02 [INFO] tor_calculator: [ui] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2026-01-30 18:51:03 [INFO] tor_calculator: [ui]  ✓ Ready in 1068ms
+2026-01-30 18:51:06 [DEBUG] tor_calculator: HTTP is healthy: localhost:3000
+2026-01-30 18:51:06 [INFO] tor_calculator: [ui]  GET / 200 in 1876ms (compile: 1656ms, render: 220ms)
+2026-01-30 18:51:06 [INFO] tor_calculator: Test auth enabled: 2 accounts ensured.
+2026-01-30 18:51:08 [INFO] tor_calculator: [ui]  GET / 200 in 193ms (compile: 23ms, render: 170ms)
+2026-01-30 18:51:09 [DEBUG] tor_calculator: Hotkeys injected
+2026-01-30 18:51:41 [WARNING] tor_calculator: UI production build not found (expected "ui/.next/BUILD_ID"). Falling back to dev mode.
+2026-01-30 18:51:42 [WARNING] tor_calculator: Next dev lock is present and UI at localhost:3000 is healthy. Reusing existing dev server.
+2026-01-30 18:51:42 [INFO] tor_calculator: [ui]  GET / 200 in 27ms (compile: 3ms, render: 24ms)
+2026-01-30 18:51:42 [WARNING] tor_calculator: UI port localhost:3000 is already in use and looks healthy. Reusing existing UI server.
+2026-01-30 18:51:42 [INFO] tor_calculator: [ui]  GET / 200 in 22ms (compile: 3ms, render: 19ms)
+2026-01-30 18:51:42 [INFO] tor_calculator: [ui]  GET / 200 in 24ms (compile: 3ms, render: 21ms)
+2026-01-30 18:51:42 [INFO] tor_calculator: Test auth enabled: 2 accounts ensured.
+2026-01-30 18:51:43 [INFO] tor_calculator: [ui]  GET / 200 in 71ms (compile: 4ms, render: 67ms)
+2026-01-30 18:53:01 [INFO] tor_calculator: Window closed -> stopping UI server...
+2026-01-30 18:56:59 [DEBUG] tor_calculator: Logging initialized. debug=True log_file=C:\Users\User\Documents\projects_triazov\tor-calculator\debug.log
+2026-01-30 18:57:00 [WARNING] tor_calculator: Next dev lock is present and UI at localhost:3000 is healthy. Reusing existing dev server.
+2026-01-30 18:57:00 [WARNING] tor_calculator: UI port localhost:3000 is already in use and looks healthy. Reusing existing UI server.
+2026-01-30 18:57:30 [WARNING] tor_calculator: UI production build not found (expected "ui/.next/BUILD_ID"). Falling back to dev mode.
+2026-01-30 18:57:32 [WARNING] tor_calculator: Next dev lock is present but UI at localhost:3000 is not responding. Trying to recover...
+2026-01-30 18:57:34 [WARNING] tor_calculator: Killed PID 12528. taskkill output: �ᯥ譮: �����, � �����䨪��஬ 20872, ���୨� ����� 12528, �� �����襭.
+�ᯥ譮: �����, � �����䨪��஬ 12528, ���୨� ����� 23756, �� �����襭.
+2026-01-30 18:57:35 [WARNING] tor_calculator: Removed stale Next dev lock: C:\Users\User\Documents\projects_triazov\tor-calculator\ui\.next\dev\lock
+2026-01-30 18:57:36 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 18:57:36 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3000
+2026-01-30 18:57:36 [INFO] tor_calculator: [ui] 
+2026-01-30 18:57:36 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 18:57:36 [INFO] tor_calculator: [ui] > next dev -p 3000
+2026-01-30 18:57:36 [INFO] tor_calculator: [ui] 
+2026-01-30 18:57:37 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10 (Turbopack)
+2026-01-30 18:57:37 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3000
+2026-01-30 18:57:37 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3000
+2026-01-30 18:57:37 [INFO] tor_calculator: [ui] 
+2026-01-30 18:57:37 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 18:57:37 [INFO] tor_calculator: [ui] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2026-01-30 18:57:37 [INFO] tor_calculator: [ui]  ✓ Ready in 583ms
+2026-01-30 18:57:39 [INFO] tor_calculator: [ui]  GET / 200 in 1418ms (compile: 1329ms, render: 90ms)
+2026-01-30 18:57:39 [INFO] tor_calculator: Test auth enabled: 2 accounts ensured.
+2026-01-30 18:57:40 [INFO] tor_calculator: [ui]  GET / 200 in 36ms (compile: 4ms, render: 32ms)
+2026-01-30 18:59:01 [INFO] tor_calculator: Window closed -> stopping UI server...
+2026-01-30 19:04:22 [DEBUG] tor_calculator: Logging initialized. debug=True log_file=C:\Users\User\Documents\projects_triazov\tor-calculator\debug.log
+2026-01-30 19:04:23 [WARNING] tor_calculator: Next dev lock is present and UI at localhost:3000 is healthy. Reusing existing dev server.
+2026-01-30 19:04:23 [WARNING] tor_calculator: UI port localhost:3000 is already in use and looks healthy. Reusing existing UI server.
+2026-01-30 19:05:19 [WARNING] tor_calculator: UI production build not found (expected "ui/.next/BUILD_ID"). Falling back to dev mode.
+2026-01-30 19:05:21 [WARNING] tor_calculator: Next dev lock is present but UI at localhost:3000 is not responding. Trying to recover...
+2026-01-30 19:05:23 [WARNING] tor_calculator: Killed PID 27256. taskkill output: �ᯥ譮: �����, � �����䨪��஬ 3344, ���୨� ����� 27256, �� �����襭.
+�ᯥ譮: �����, � �����䨪��஬ 27256, ���୨� ����� 23148, �� �����襭.
+2026-01-30 19:05:23 [WARNING] tor_calculator: Removed stale Next dev lock: C:\Users\User\Documents\projects_triazov\tor-calculator\ui\.next\dev\lock
+2026-01-30 19:05:24 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 19:05:24 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3000
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui] 
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui] > next dev -p 3000
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui] 
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10 (Turbopack)
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3000
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3000
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui] 
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 19:05:25 [INFO] tor_calculator: [ui] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2026-01-30 19:05:26 [INFO] tor_calculator: [ui]  ✓ Ready in 552ms
+2026-01-30 19:05:27 [INFO] tor_calculator: [ui]  GET / 200 in 1482ms (compile: 1393ms, render: 89ms)
+2026-01-30 19:05:27 [INFO] tor_calculator: [ui]  GET / 200 in 24ms (compile: 3ms, render: 21ms)
+2026-01-30 19:05:27 [INFO] tor_calculator: Test auth enabled: 2 accounts ensured.
+2026-01-30 19:05:28 [INFO] tor_calculator: [ui]  GET / 200 in 35ms (compile: 4ms, render: 31ms)
+2026-01-30 19:06:16 [INFO] tor_calculator: [ui] ^C^C
+2026-01-30 19:08:12 [DEBUG] tor_calculator: Logging initialized. debug=True log_file=C:\Users\User\Documents\projects_triazov\tor-calculator\debug.log
+2026-01-30 19:08:14 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 19:08:14 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3000
+2026-01-30 19:08:14 [INFO] tor_calculator: [ui] 
+2026-01-30 19:08:14 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 19:08:14 [INFO] tor_calculator: [ui] > next dev -p 3000
+2026-01-30 19:08:14 [INFO] tor_calculator: [ui] 
+2026-01-30 19:08:15 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10 (Turbopack)
+2026-01-30 19:08:15 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3000
+2026-01-30 19:08:15 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3000
+2026-01-30 19:08:15 [INFO] tor_calculator: [ui] 
+2026-01-30 19:08:15 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 19:08:15 [INFO] tor_calculator: [ui] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2026-01-30 19:08:16 [INFO] tor_calculator: [ui]  ✓ Ready in 1082ms
+2026-01-30 19:08:20 [DEBUG] tor_calculator: HTTP is healthy: localhost:3000
+2026-01-30 19:08:20 [INFO] tor_calculator: [ui]  GET / 200 in 1867ms (compile: 1650ms, render: 217ms)
+2026-01-30 19:08:20 [INFO] tor_calculator: Test auth enabled: 2 accounts ensured.
+2026-01-30 19:08:21 [INFO] tor_calculator: [ui]  GET / 200 in 43ms (compile: 4ms, render: 38ms)
+2026-01-30 19:08:21 [DEBUG] tor_calculator: Hotkeys injected
+2026-01-30 19:09:51 [WARNING] tor_calculator: UI production build not found (expected "ui/.next/BUILD_ID"). Falling back to dev mode.
+2026-01-30 19:09:52 [WARNING] tor_calculator: pnpm not found in PATH, falling back to npm.
+2026-01-30 19:09:52 [INFO] tor_calculator: Starting UI server: npm.cmd --prefix C:\Users\User\Documents\projects_triazov\tor-calculator\ui run dev -- -p 3000
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui] 
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui] > my-v0-project@0.1.0 dev
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui] > next dev -p 3000
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui] 
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui]    ▲ Next.js 16.0.10 (Turbopack)
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui]    - Local:         http://localhost:3000
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui]    - Network:       http://192.168.0.109:3000
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui] 
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui]  ✓ Starting...
+2026-01-30 19:09:53 [INFO] tor_calculator: [ui] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2026-01-30 19:09:54 [INFO] tor_calculator: [ui]  ✓ Ready in 584ms
+2026-01-30 19:09:55 [INFO] tor_calculator: [ui]  GET / 200 in 1469ms (compile: 1376ms, render: 93ms)
+2026-01-30 19:09:55 [INFO] tor_calculator: Test auth enabled: 2 accounts ensured.
+2026-01-30 19:09:56 [INFO] tor_calculator: [ui]  GET / 200 in 46ms (compile: 5ms, render: 41ms)
+2026-01-30 19:11:36 [INFO] tor_calculator: Window closed -> stopping UI server...
