@@ -1,10 +1,16 @@
 "use client"
 
 import { Minus, X } from "lucide-react"
-import { callDesktop, isDesktop } from "@/lib/desktop-api"
+import { callDesktop, isDesktop, onDesktopReady } from "@/lib/desktop-api"
+import { useEffect, useState } from "react"
 
 export function WindowTitlebar() {
-  const canControl = isDesktop()
+  const [canControl, setCanControl] = useState(false)
+
+  useEffect(() => {
+    setCanControl(isDesktop())
+    return onDesktopReady(() => setCanControl(true))
+  }, [])
 
   const minimize = async () => {
     if (!canControl) return

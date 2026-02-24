@@ -6,6 +6,10 @@ const __dirname = path.dirname(__filename)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Для desktop-сборки: статический export в `ui/out`
+  output: "export",
+  // Чтобы маршруты корректно работали как файлы (например, /settings/ -> settings/index.html)
+  trailingSlash: true,
   // Убирает dev-виджет "Route / Turbopack" (Next.js on-screen indicator)
   devIndicators: false,
   // Фикс для предупреждения про неверный workspace root (из-за лишних lockfiles вне проекта)
@@ -23,3 +27,4 @@ const nextConfig = {
 }
 
 export default nextConfig
+

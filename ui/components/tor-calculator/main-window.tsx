@@ -8,12 +8,7 @@ import { SettingsTab } from "./tabs/settings-tab"
 
 type TabType = "home" | "calculator" | "settings"
 
-interface MainWindowProps {
-  user: { username: string; status: string }
-  onLogout: () => void
-}
-
-export function MainWindow({ user, onLogout }: MainWindowProps) {
+export function MainWindow() {
   const [activeTab, setActiveTab] = useState<TabType>("home")
   const [key, setKey] = useState(0)
 
@@ -39,8 +34,6 @@ export function MainWindow({ user, onLogout }: MainWindowProps) {
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        user={user}
-        onLogout={onLogout}
       />
 
       <main className="flex-1 p-8 overflow-auto custom-scrollbar">

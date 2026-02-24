@@ -1,27 +1,35 @@
-# tor-calculator
-tor-calculator - это мощный перекуп калькулятор сделанный на python
+# TorCalculator
 
-## Запуск UI (Next.js)
+Локальный калькулятор для учёта перепродаж.
 
-- Требования: Node.js **>= 18** (рекомендуется 20 LTS), пакетный менеджер **pnpm** (или npm).
+## Требования
+
+- Python 3.10+
+- Node.js 18+ (для сборки UI)
+- pnpm или npm
+
+## Запуск
+
+```bash
+pip install -r requirements.txt
+python app.py
+```
+
+## Режим разработки
+
+```bash
+python app.py --dev
+```
+
+## Сборка UI
 
 ```bash
 cd ui
 pnpm install
-pnpm dev
+pnpm build
 ```
 
-Если `pnpm` не установлен, можно через `npm`:
+## Горячие клавиши
 
-```bash
-cd ui
-npm install
-npm run dev
-```
-
-## Запуск desktop (pywebview)
-
-```bash
-pip install -r requirements.txt
-python app.py --dev
-```
+- `F5` или `Ctrl+R` - перезагрузка
+- `F12` или `Ctrl+Shift+I` - devtools

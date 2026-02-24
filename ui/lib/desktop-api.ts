@@ -12,6 +12,24 @@ export function isDesktop(): boolean {
   return typeof window !== "undefined" && !!window.pywebview?.api
 }
 
+export function onDesktopReady(cb: () => void): () => void {
+  if (typeof window === "undefined") return () => {}
+
+  const handler = () => cb()
+
+  window.addEventListener("pywebviewready", handler as any)
+  window.addEventListener("_pywebviewready", handler as any)
+
+  setTimeout(() => {
+    if (isDesktop()) cb()
+  }, 0)
+
+  return () => {
+    window.removeEventListener("pywebviewready", handler as any)
+    window.removeEventListener("_pywebviewready", handler as any)
+  }
+}
+
 export async function callDesktop<T = any>(method: string, ...args: any[]): Promise<T> {
   const api = window.pywebview?.api
   if (!api) {
@@ -23,4 +41,3 @@ export async function callDesktop<T = any>(method: string, ...args: any[]): Prom
   }
   return await fn(...args)
 }
-

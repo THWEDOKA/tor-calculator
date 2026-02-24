@@ -1,1 +1,4 @@
 pywebview==6.1
+fastapi
+uvicorn
+
