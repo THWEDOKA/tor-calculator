@@ -1,7 +1,7 @@
 # 🔥 TorCalculator
 
 **Локальный калькулятор для учёта перепродаж**  
-Специально создано для [Ettore](https://youtube.com/@Ettore191K) 👑
+Специально создано для [Ettore](https://youtube.com/@ETTOREE) 👑
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
