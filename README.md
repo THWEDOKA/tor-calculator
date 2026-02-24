@@ -35,7 +35,7 @@
 ### Клонирование репозитория
 
 ```bash
-git clone https://github.com/yourusername/tor-calculator.git
+git clone https://github.com/triazov/tor-calculator.git
 cd tor-calculator
 ```
 
