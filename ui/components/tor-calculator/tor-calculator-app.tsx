@@ -39,15 +39,15 @@ export function TorCalculatorApp() {
   }, [mode])
 
   return (
-    <div className="h-screen w-screen bg-[#0f172a]">
-      <div className="h-full w-full overflow-hidden bg-[#0f172a] border border-[#334155]">
+    <div className="h-screen w-screen bg-[#0e0e0e]">
+      <div className="h-full w-full overflow-hidden bg-[#0e0e0e] border border-[#2a2a2a]">
         {mode === "desktop" ? <WindowTitlebar /> : <WebTopbar />}
         <div className={`${isTransitioning ? "opacity-0" : "opacity-100"} transition-opacity duration-300 h-[calc(100%-44px)]`}>
           {mode === "detecting" ? (
             <div className="h-full w-full flex items-center justify-center">
               <div className="text-center">
-                <div className="w-10 h-10 mx-auto rounded-full border-2 border-[#334155] border-t-[#3b82f6] animate-spin" />
-                <div className="mt-3 text-sm text-[#94a3b8]">Загрузка...</div>
+                <div className="w-10 h-10 mx-auto rounded-full border-2 border-[#2a2a2a] border-t-[#e81c5a] animate-spin" />
+                <div className="mt-3 text-sm text-[#a3a3a3]">Загрузка...</div>
               </div>
             </div>
           ) : (

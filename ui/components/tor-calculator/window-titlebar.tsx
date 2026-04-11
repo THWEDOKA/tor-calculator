@@ -3,6 +3,7 @@
 import { Minus, X } from "lucide-react"
 import { callDesktop, isDesktop, onDesktopReady } from "@/lib/desktop-api"
 import { useEffect, useState } from "react"
+import { BrandLogo } from "./brand-logo"
 
 export function WindowTitlebar() {
   const [canControl, setCanControl] = useState(false)
@@ -31,13 +32,11 @@ export function WindowTitlebar() {
   }
 
   return (
-    <div className="h-11 w-full flex items-stretch select-none border-b border-[#334155] bg-[#0f172a]/95 backdrop-blur">
+    <div className="h-11 w-full flex items-stretch select-none border-b border-[#2a2a2a] bg-[#0e0e0e]/95 backdrop-blur">
       {/* Drag region: only this left area moves the window */}
       <div className="pywebview-drag-region flex-1 flex items-center gap-3 px-4">
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#3b82f6] to-[#8b5cf6] flex items-center justify-center">
-          <span className="text-white font-bold text-sm">T</span>
-        </div>
-        <div className="text-[#f8fafc] font-semibold text-sm">TorCalculator</div>
+        <BrandLogo className="w-7 h-7" />
+        <div className="text-[#f5f5f5] font-semibold text-sm">TorCalculator</div>
       </div>
 
       <div className="flex items-center">
@@ -45,7 +44,7 @@ export function WindowTitlebar() {
           type="button"
           onClick={minimize}
           disabled={!canControl}
-          className="h-11 w-12 flex items-center justify-center text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#334155]/40 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+          className="h-11 w-12 flex items-center justify-center text-[#a3a3a3] hover:text-[#f5f5f5] hover:bg-[#2a2a2a]/60 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
           aria-label="Свернуть"
           title="Свернуть"
         >
@@ -55,7 +54,7 @@ export function WindowTitlebar() {
           type="button"
           onClick={close}
           disabled={!canControl}
-          className="h-11 w-12 flex items-center justify-center text-[#94a3b8] hover:text-white hover:bg-red-500/80 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+          className="h-11 w-12 flex items-center justify-center text-[#a3a3a3] hover:text-white hover:bg-red-500/80 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
           aria-label="Закрыть"
           title="Закрыть"
         >

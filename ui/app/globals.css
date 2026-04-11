@@ -5,33 +5,33 @@
 
 :root {
   --background: #f8fafc;
-  --foreground: #0f172a;
+  --foreground: #0e0e0e;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #0e0e0e;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #3b82f6;
+  --popover-foreground: #0e0e0e;
+  --primary: #e81c5a;
   --primary-foreground: #ffffff;
   --secondary: #e2e8f0;
-  --secondary-foreground: #0f172a;
+  --secondary-foreground: #0e0e0e;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #3b82f6;
+  --accent: #e81c5a;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #3b82f6;
+  --ring: #e81c5a;
   --radius: 0.5rem;
   
-  --tor-bg-dark: #0f172a;
-  --tor-bg-card: #1e293b;
-  --tor-accent-blue: #3b82f6;
-  --tor-accent-violet: #8b5cf6;
+  --tor-bg-dark: #0e0e0e;
+  --tor-bg-card: #161616;
+  --tor-accent-blue: #e81c5a;
+  --tor-accent-violet: #b81448;
   --tor-accent-green: #10b981;
-  --tor-text-primary: #f8fafc;
-  --tor-text-secondary: #94a3b8;
+  --tor-text-primary: #f5f5f5;
+  --tor-text-secondary: #a3a3a3;
   --tor-positive: #1e3a1e;
   --tor-negative: #3a1e1e;
   --tor-positive-border: #22c55e;
@@ -54,25 +54,25 @@
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --popover: #1e293b;
-  --popover-foreground: #f8fafc;
-  --primary: #3b82f6;
+  --background: #0e0e0e;
+  --foreground: #f5f5f5;
+  --card: #161616;
+  --card-foreground: #f5f5f5;
+  --popover: #161616;
+  --popover-foreground: #f5f5f5;
+  --primary: #e81c5a;
   --primary-foreground: #ffffff;
-  --secondary: #334155;
-  --secondary-foreground: #f8fafc;
-  --muted: #334155;
-  --muted-foreground: #94a3b8;
-  --accent: #3b82f6;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #f5f5f5;
+  --muted: #2a2a2a;
+  --muted-foreground: #a3a3a3;
+  --accent: #e81c5a;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #334155;
-  --input: #334155;
-  --ring: #3b82f6;
+  --border: #2a2a2a;
+  --input: #2a2a2a;
+  --ring: #e81c5a;
 
   /* Shadcn/ui default variables (preserving user's existing colors) */
   --chart-1: oklch(0.488 0.243 264.376);
@@ -142,7 +142,7 @@
 
 /* Desktop (pywebview) - transparent window background for rounded corners */
 body.tor-desktop {
-  background: #0f172a !important;
+  background: #0e0e0e !important;
 }
 
 /* TorCalculator Custom Animations */
@@ -202,6 +202,72 @@ body.tor-desktop {
   animation: success-pulse 0.6s ease-out;
 }
 
+@keyframes sell-success-pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-sell-success {
+  animation: sell-success-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes logo-breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+}
+
+@keyframes logo-sheen-move {
+  0% {
+    transform: translateX(-180%) rotate(12deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.35;
+  }
+  60% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateX(360%) rotate(12deg);
+    opacity: 0;
+  }
+}
+
+.tor-logo-shell {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.tor-logo-shell:hover {
+  transform: translateY(-1px) scale(1.03);
+  border-color: rgba(232, 28, 90, 0.75);
+  box-shadow: 0 0 18px rgba(232, 28, 90, 0.25);
+}
+
+.tor-logo-image {
+  animation: logo-breathe 3.1s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.tor-logo-sheen {
+  animation: logo-sheen-move 3.4s linear infinite;
+}
+
 /* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -212,10 +278,10 @@ body.tor-desktop {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #3a3a3a;
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #525252;
 }

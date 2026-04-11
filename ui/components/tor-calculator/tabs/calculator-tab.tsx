@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Trash2, TrendingUp, TrendingDown, Wallet } from "lucide-react"
 import { callDesktop, isDesktop } from "@/lib/desktop-api"
 
@@ -21,41 +21,39 @@ export function CalculatorTab() {
   const [success, setSuccess] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      if (isDesktop()) {
-        const res = await callDesktop<{ ok: boolean; items?: any[] }>("transactions_list")
-        if (cancelled) return
-        if ((res as any).ok && Array.isArray((res as any).items)) {
-          setTransactions(
-            (res as any).items.map((t: any) => ({
-              id: Number(t.id),
-              amount: Number(t.amount),
-              comment: String(t.comment ?? ""),
-              createdAt: new Date(String(t.createdAt)),
-            }))
-          )
-          return
-        }
-      }
-
-      const saved = localStorage.getItem("tor-transactions")
-      if (saved) {
-        const parsed = JSON.parse(saved)
+  const loadTransactions = useCallback(async () => {
+    if (isDesktop()) {
+      const res = await callDesktop<{ ok: boolean; items?: any[] }>("transactions_list")
+      if ((res as any).ok && Array.isArray((res as any).items)) {
         setTransactions(
-          parsed.map((t: Transaction & { createdAt: string }) => ({
-            ...t,
-            createdAt: new Date(t.createdAt),
+          (res as any).items.map((t: any) => ({
+            id: Number(t.id),
+            amount: Number(t.amount),
+            comment: String(t.comment ?? ""),
+            createdAt: new Date(String(t.createdAt)),
           }))
         )
+        return
       }
     }
-    load()
-    return () => {
-      cancelled = true
+
+    const saved = localStorage.getItem("tor-transactions")
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      setTransactions(
+        parsed.map((t: Transaction & { createdAt: string }) => ({
+          ...t,
+          createdAt: new Date(t.createdAt),
+        }))
+      )
+    } else {
+      setTransactions([])
     }
   }, [])
+
+  useEffect(() => {
+    void loadTransactions()
+  }, [loadTransactions])
 
   useEffect(() => {
     if (!isDesktop()) {
@@ -136,22 +134,21 @@ export function CalculatorTab() {
   }
 
   const formatAmount = (amount: number) => {
-    const prefix = amount > 0 ? "+" : ""
-    return `${prefix}${amount.toLocaleString("ru-RU")} ₽`
+    return `$${Math.abs(amount).toLocaleString("ru-RU")}`
   }
 
   return (
     <div className="animate-in fade-in duration-300 h-full flex flex-col">
-      <h1 className="text-2xl font-bold text-[#f8fafc] mb-6">Калькулятор сделок</h1>
+      <h1 className="text-2xl font-bold text-[#f5f5f5] mb-6">Калькулятор сделок</h1>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-[#1e293b] rounded-xl p-4 border border-[#334155]">
+        <div className="bg-[#161616] rounded-xl p-4 border border-[#2a2a2a]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#3b82f6]/20 flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-[#3b82f6]" />
+            <div className="w-10 h-10 rounded-lg bg-[#e81c5a]/20 flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-[#e81c5a]" />
             </div>
             <div>
-              <div className="text-sm text-[#94a3b8]">Общий баланс</div>
+              <div className="text-sm text-[#a3a3a3]">Общий баланс</div>
               <div className={`text-xl font-bold ${totalBalance >= 0 ? "text-[#10b981]" : "text-red-400"}`}>
                 {formatAmount(totalBalance)}
               </div>
@@ -159,25 +156,25 @@ export function CalculatorTab() {
           </div>
         </div>
 
-        <div className="bg-[#1e293b] rounded-xl p-4 border border-[#334155]">
+        <div className="bg-[#161616] rounded-xl p-4 border border-[#2a2a2a]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[#10b981]/20 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-[#10b981]" />
             </div>
             <div>
-              <div className="text-sm text-[#94a3b8]">Доходы</div>
+              <div className="text-sm text-[#a3a3a3]">Доходы</div>
               <div className="text-xl font-bold text-[#10b981]">{formatAmount(totalPositive)}</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#1e293b] rounded-xl p-4 border border-[#334155]">
+        <div className="bg-[#161616] rounded-xl p-4 border border-[#2a2a2a]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
               <TrendingDown className="w-5 h-5 text-red-400" />
             </div>
             <div>
-              <div className="text-sm text-[#94a3b8]">Расходы</div>
+              <div className="text-sm text-[#a3a3a3]">Расходы</div>
               <div className="text-xl font-bold text-red-400">{formatAmount(totalNegative)}</div>
             </div>
           </div>
@@ -185,37 +182,37 @@ export function CalculatorTab() {
       </div>
 
       <div className="flex-1 grid grid-cols-[320px_1fr] gap-6 min-h-0">
-        <div className="bg-[#1e293b] rounded-xl p-6 border border-[#334155] h-fit">
-          <h2 className="text-lg font-semibold text-[#f8fafc] mb-4">Добавить запись</h2>
+        <div className="bg-[#161616] rounded-xl p-6 border border-[#2a2a2a] h-fit">
+          <h2 className="text-lg font-semibold text-[#f5f5f5] mb-4">Добавить запись</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#94a3b8] mb-2">Сумма</label>
+              <label className="block text-sm font-medium text-[#a3a3a3] mb-2">Сумма</label>
               <input
                 type="text"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="800, -700, 900"
-                className={`w-full px-4 py-3 bg-[#0f172a] border rounded-lg text-[#f8fafc] placeholder-[#64748b] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 focus:border-[#3b82f6] ${
-                  error ? "border-red-500 animate-shake" : "border-[#334155]"
+                className={`w-full px-4 py-3 bg-[#0e0e0e] border rounded-lg text-[#f5f5f5] placeholder-[#737373] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#e81c5a]/50 focus:border-[#e81c5a] ${
+                  error ? "border-red-500 animate-shake" : "border-[#2a2a2a]"
                 } ${success ? "animate-success-pulse border-[#10b981]" : ""}`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#94a3b8] mb-2">Комментарий</label>
+              <label className="block text-sm font-medium text-[#a3a3a3] mb-2">Комментарий</label>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Введите комментарий к сделке..."
                 rows={3}
-                className="w-full px-4 py-3 bg-[#0f172a] border border-[#334155] rounded-lg text-[#f8fafc] placeholder-[#64748b] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 focus:border-[#3b82f6] resize-none"
+                className="w-full px-4 py-3 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-[#f5f5f5] placeholder-[#737373] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#e81c5a]/50 focus:border-[#e81c5a] resize-none"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-[#3b82f6]/25 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-[#e81c5a] to-[#b81448] text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-[#e81c5a]/25 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] flex items-center justify-center gap-2"
             >
               <Plus className="w-5 h-5" />
               Сохранить запись
@@ -223,17 +220,17 @@ export function CalculatorTab() {
           </form>
         </div>
 
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] flex flex-col min-h-0">
-          <div className="p-4 border-b border-[#334155]">
-            <h2 className="text-lg font-semibold text-[#f8fafc]">
+        <div className="bg-[#161616] rounded-xl border border-[#2a2a2a] flex flex-col min-h-0">
+          <div className="p-4 border-b border-[#2a2a2a]">
+            <h2 className="text-lg font-semibold text-[#f5f5f5]">
               История сделок{" "}
-              <span className="text-[#94a3b8] font-normal">({transactions.length})</span>
+              <span className="text-[#a3a3a3] font-normal">({transactions.length})</span>
             </h2>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
             {transactions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-[#94a3b8]">
+              <div className="flex flex-col items-center justify-center h-full text-[#a3a3a3]">
                 <Wallet className="w-12 h-12 mb-3 opacity-50" />
                 <p>Нет записей</p>
                 <p className="text-sm">Добавьте первую сделку</p>
@@ -260,11 +257,11 @@ export function CalculatorTab() {
                         {formatAmount(transaction.amount)}
                       </div>
                       {transaction.comment && (
-                        <p className="text-[#94a3b8] text-sm mt-1 break-words">
+                        <p className="text-[#a3a3a3] text-sm mt-1 break-words">
                           {transaction.comment}
                         </p>
                       )}
-                      <p className="text-[#64748b] text-xs mt-2">
+                      <p className="text-[#737373] text-xs mt-2">
                         {formatDate(transaction.createdAt)}
                       </p>
                     </div>

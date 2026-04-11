@@ -43,6 +43,7 @@ cd tor-calculator
 
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-build.txt
 ```
 
 ### Установка зависимостей Node.js
@@ -80,11 +81,36 @@ pnpm build
 
 ---
 
+## 🧱 Сборка `.exe` (Nuitka, Windows)
+
+Иконка для exe берется из файла `icon.png` в корне проекта.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-exe.ps1
+```
+
+По умолчанию скрипт собирает **один файл exe**.
+
+Вариант папкой (standalone):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-exe.ps1 -Standalone
+```
+
+Готовые артефакты:
+- onefile: `release/TorCalculator.exe`
+- standalone: папка `release/`
+
+---
+
 ## 📁 Структура
 
 ```
 tor-calculator/
 ├── app.py              # Главный файл приложения (pywebview)
+├── scripts/            # Скрипты сборки и обслуживания
+│   └── build-exe.ps1   # Сборка exe через Nuitka
+├── ARCHITECTURE.md     # Краткое описание архитектуры
 ├── ui/                 # Next.js фронтенд
 │   ├── app/           # Страницы приложения
 │   ├── components/    # React компоненты

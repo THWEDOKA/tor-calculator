@@ -63,6 +63,7 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
         }
       }
       localStorage.removeItem("tor-transactions")
+      localStorage.removeItem("tor-items")
       onClearData()
       setShowClearModal(false)
     }
@@ -96,25 +97,25 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
 
   return (
     <div className="animate-in fade-in duration-300">
-      <h1 className="text-2xl font-bold text-[#f8fafc] mb-6">Настройки</h1>
+      <h1 className="text-2xl font-bold text-[#f5f5f5] mb-6">Настройки</h1>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="space-y-6">
-          <div className="bg-[#1e293b] rounded-xl p-6 border border-[#334155]">
+          <div className="bg-[#161616] rounded-xl p-6 border border-[#2a2a2a]">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-lg bg-[#10b981]/20 flex items-center justify-center">
                 <Database className="w-5 h-5 text-[#10b981]" />
               </div>
-              <h2 className="text-lg font-semibold text-[#f8fafc]">Данные</h2>
+              <h2 className="text-lg font-semibold text-[#f5f5f5]">Данные</h2>
             </div>
 
             <div className="space-y-3">
               <button
                 type="button"
                 onClick={handleExportCSV}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f172a] rounded-lg text-[#f8fafc] hover:bg-[#0f172a]/70 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 bg-[#0e0e0e] rounded-lg text-[#f5f5f5] hover:bg-[#0e0e0e]/70 transition-colors"
               >
-                <Download className="w-5 h-5 text-[#3b82f6]" />
+                <Download className="w-5 h-5 text-[#e81c5a]" />
                 Экспорт сделок в CSV
               </button>
 
@@ -130,9 +131,9 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
               <button
                 type="button"
                 onClick={handleBackup}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f172a] rounded-lg text-[#f8fafc] hover:bg-[#0f172a]/70 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 bg-[#0e0e0e] rounded-lg text-[#f5f5f5] hover:bg-[#0e0e0e]/70 transition-colors"
               >
-                <Database className="w-5 h-5 text-[#8b5cf6]" />
+                <Database className="w-5 h-5 text-[#e81c5a]" />
                 Резервное копирование данных
               </button>
             </div>
@@ -140,33 +141,33 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
         </div>
 
         <div>
-          <div className="bg-[#1e293b] rounded-xl p-6 border border-[#334155]">
+          <div className="bg-[#161616] rounded-xl p-6 border border-[#2a2a2a]">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-[#8b5cf6]/20 flex items-center justify-center">
-                <Info className="w-5 h-5 text-[#8b5cf6]" />
+              <div className="w-10 h-10 rounded-lg bg-[#e81c5a]/20 flex items-center justify-center">
+                <Info className="w-5 h-5 text-[#e81c5a]" />
               </div>
-              <h2 className="text-lg font-semibold text-[#f8fafc]">О программе</h2>
+              <h2 className="text-lg font-semibold text-[#f5f5f5]">О программе</h2>
             </div>
 
             <div className="space-y-4">
-              <div className="flex justify-between items-center py-3 border-b border-[#334155]">
-                <span className="text-[#94a3b8]">Название</span>
-                <span className="text-[#f8fafc] font-medium">TorCalculator</span>
+              <div className="flex justify-between items-center py-3 border-b border-[#2a2a2a]">
+                <span className="text-[#a3a3a3]">Название</span>
+                <span className="text-[#f5f5f5] font-medium">TorCalculator</span>
               </div>
-              <div className="flex justify-between items-center py-3 border-b border-[#334155]">
-                <span className="text-[#94a3b8]">Версия</span>
-                <span className="text-[#f8fafc] font-medium">0.0.1</span>
+              <div className="flex justify-between items-center py-3 border-b border-[#2a2a2a]">
+                <span className="text-[#a3a3a3]">Версия</span>
+                <span className="text-[#f5f5f5] font-medium">0.0.2</span>
               </div>
-              <div className="flex justify-between items-center py-3 border-b border-[#334155]">
-                <span className="text-[#94a3b8]">Разработчик</span>
-                <span className="text-[#f8fafc] font-medium">triazov</span>
+              <div className="flex justify-between items-center py-3 border-b border-[#2a2a2a]">
+                <span className="text-[#a3a3a3]">Разработчик</span>
+                <span className="text-[#f5f5f5] font-medium">triazov</span>
               </div>
 
               <a
                 href="https://triazov.ru"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-[#3b82f6]/25 hover:-translate-y-0.5 mt-4"
+                className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-[#e81c5a] to-[#b81448] text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-[#e81c5a]/25 hover:-translate-y-0.5 mt-4"
               >
                 Сайт разработчика
                 <ExternalLink className="w-4 h-4" />
@@ -178,28 +179,28 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
 
       {showClearModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-in fade-in duration-200">
-          <div className="bg-[#1e293b] rounded-xl p-6 max-w-md w-full mx-4 border border-[#334155] animate-scale-in">
+          <div className="bg-[#161616] rounded-xl p-6 max-w-md w-full mx-4 border border-[#2a2a2a] animate-scale-in">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
                 <AlertTriangle className="w-6 h-6 text-red-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-[#f8fafc]">Подтверждение</h3>
-                <p className="text-[#94a3b8] text-sm">
+                <h3 className="text-lg font-semibold text-[#f5f5f5]">Подтверждение</h3>
+                <p className="text-[#a3a3a3] text-sm">
                   Вы уверены, что хотите удалить всю историю?
                 </p>
               </div>
             </div>
 
-            <p className="text-[#94a3b8] mb-6">
-              Это действие нельзя отменить. Все записи о сделках будут безвозвратно удалены.
+            <p className="text-[#a3a3a3] mb-6">
+              Это действие нельзя отменить. История сделок, предметы в инвентаре и связанные данные будут удалены.
             </p>
 
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setShowClearModal(false)}
-                className="flex-1 py-3 bg-[#334155] text-[#f8fafc] rounded-lg hover:bg-[#475569] transition-colors"
+                className="flex-1 py-3 bg-[#2a2a2a] text-[#f5f5f5] rounded-lg hover:bg-[#404040] transition-colors"
               >
                 Отмена
               </button>
@@ -215,7 +216,7 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
             <button
               type="button"
               onClick={() => setShowClearModal(false)}
-              className="absolute top-4 right-4 p-2 text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+              className="absolute top-4 right-4 p-2 text-[#a3a3a3] hover:text-[#f5f5f5] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>

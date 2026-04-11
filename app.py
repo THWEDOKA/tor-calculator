@@ -23,6 +23,8 @@ from typing import Optional
 PROJECT_ROOT = Path(__file__).resolve().parent
 UI_DIR = PROJECT_ROOT / "ui"
 LOG_FILE = PROJECT_ROOT / "debug.log"
+APP_NAME = "TorCalculator"
+APP_VERSION = "0.0.2"
 
 
 def setup_logging(debug: bool) -> logging.Logger:
@@ -319,7 +321,7 @@ def get_data_dir() -> Path:
 
     if os.name == "nt":
         base = os.getenv("LOCALAPPDATA") or os.getenv("APPDATA")
-        p = (Path(base) if base else PROJECT_ROOT) / "TorCalculator"
+        p = (Path(base) if base else PROJECT_ROOT) / APP_NAME
     else:
         p = Path.home() / ".tor-calculator"
     p.mkdir(parents=True, exist_ok=True)
@@ -342,6 +344,18 @@ def init_db(conn: sqlite3.Connection, logger: logging.Logger) -> None:
         """
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC)")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS inventory_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          purchase_price REAL NOT NULL,
+          image_data TEXT NOT NULL DEFAULT '',
+          purchased_at TEXT NOT NULL,
+          purchase_tx_id INTEGER NOT NULL
+        )
+        """
+    )
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS settings (
@@ -415,8 +429,8 @@ class DesktopApi:
     def get_app_info(self) -> dict:
         return {
             "ok": True,
-            "app": "TorCalculator",
-            "version": "0.0.1",
+            "app": APP_NAME,
+            "version": APP_VERSION,
             "dataDir": str(self._data_dir),
             "dbPath": str(self._db_path),
         }
@@ -478,11 +492,112 @@ class DesktopApi:
     def transactions_clear(self) -> dict:
         try:
             with self._lock:
+                self._conn.execute("DELETE FROM inventory_items")
                 self._conn.execute("DELETE FROM transactions")
                 self._conn.commit()
             return {"ok": True}
         except Exception:
             self._logger.exception("transactions_clear failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def items_list(self) -> dict:
+        try:
+            with self._lock:
+                rows = self._conn.execute(
+                    """
+                    SELECT id, name, purchase_price, image_data, purchased_at, purchase_tx_id
+                    FROM inventory_items
+                    ORDER BY purchased_at DESC
+                    """
+                ).fetchall()
+            items = [
+                {
+                    "id": int(r["id"]),
+                    "name": r["name"] or "",
+                    "purchasePrice": float(r["purchase_price"]),
+                    "imageDataUrl": r["image_data"] or "",
+                    "purchasedAt": str(r["purchased_at"]),
+                    "purchaseTxId": int(r["purchase_tx_id"]),
+                }
+                for r in rows
+            ]
+            return {"ok": True, "items": items}
+        except Exception:
+            self._logger.exception("items_list failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def item_add(
+        self,
+        name: str,
+        purchase_price: float | str,
+        image_data: str = "",
+        add_to_calculator: bool = True,
+    ) -> dict:
+        try:
+            try:
+                price = float(purchase_price)
+            except Exception:
+                return {"ok": False, "error": "INVALID_PRICE"}
+            if price <= 0:
+                return {"ok": False, "error": "INVALID_PRICE"}
+            nm = (name or "").strip()
+            if not nm:
+                return {"ok": False, "error": "INVALID_NAME"}
+
+            created_at = _utc_iso_now()
+            comm = f"Покупка предмета: {nm}"
+            img = image_data if isinstance(image_data, str) else ""
+            add_tx = bool(add_to_calculator)
+            tx_id = int(time.time() * 1000) if add_tx else 0
+
+            with self._lock:
+                if add_tx:
+                    self._conn.execute(
+                        "INSERT INTO transactions(id, amount, comment, created_at) VALUES (?, ?, ?, ?)",
+                        (tx_id, -abs(price), comm, created_at),
+                    )
+                cur = self._conn.execute(
+                    """
+                    INSERT INTO inventory_items(name, purchase_price, image_data, purchased_at, purchase_tx_id)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (nm, price, img, created_at, tx_id),
+                )
+                item_id = int(cur.lastrowid)
+                self._conn.commit()
+
+            return {
+                "ok": True,
+                "item": {
+                    "id": item_id,
+                    "name": nm,
+                    "purchasePrice": price,
+                    "imageDataUrl": img,
+                    "purchasedAt": created_at,
+                    "purchaseTxId": tx_id,
+                },
+            }
+        except Exception:
+            self._logger.exception("item_add failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def item_delete(self, item_id: int, cancel_purchase: bool = True) -> dict:
+        try:
+            with self._lock:
+                row = self._conn.execute(
+                    "SELECT purchase_tx_id FROM inventory_items WHERE id = ?",
+                    (int(item_id),),
+                ).fetchone()
+                if not row:
+                    return {"ok": False, "error": "NOT_FOUND"}
+                purchase_tx_id = int(row["purchase_tx_id"])
+                if cancel_purchase and purchase_tx_id > 0:
+                    self._conn.execute("DELETE FROM transactions WHERE id = ?", (purchase_tx_id,))
+                self._conn.execute("DELETE FROM inventory_items WHERE id = ?", (int(item_id),))
+                self._conn.commit()
+            return {"ok": True}
+        except Exception:
+            self._logger.exception("item_delete failed")
             return {"ok": False, "error": "INTERNAL_ERROR"}
 
     def _choose_save_path(self, *, default_name: str, file_types: list[str]) -> Optional[str]:
@@ -541,6 +656,12 @@ class DesktopApi:
                 rows = self._conn.execute(
                     "SELECT id, amount, comment, created_at FROM transactions ORDER BY created_at DESC"
                 ).fetchall()
+                inv = self._conn.execute(
+                    """
+                    SELECT id, name, purchase_price, image_data, purchased_at, purchase_tx_id
+                    FROM inventory_items ORDER BY purchased_at DESC
+                    """
+                ).fetchall()
 
             items = [
                 {
@@ -551,11 +672,23 @@ class DesktopApi:
                 }
                 for r in rows
             ]
+            inventory = [
+                {
+                    "id": int(r["id"]),
+                    "name": r["name"] or "",
+                    "purchasePrice": float(r["purchase_price"]),
+                    "imageDataUrl": r["image_data"] or "",
+                    "purchasedAt": str(r["purchased_at"]),
+                    "purchaseTxId": int(r["purchase_tx_id"]),
+                }
+                for r in inv
+            ]
             payload = {
-                "app": "TorCalculator",
-                "version": "0.0.1",
+                "app": APP_NAME,
+                "version": APP_VERSION,
                 "exportedAt": _utc_iso_now(),
                 "transactions": items,
+                "inventoryItems": inventory,
             }
             Path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
             return {"ok": True, "path": path, "count": len(items)}
@@ -610,7 +743,7 @@ def inject_hotkeys(window, logger: logging.Logger) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="TOR Calculator desktop (pywebview)")
+    parser = argparse.ArgumentParser(description=f"{APP_NAME} desktop (pywebview)")
     parser.add_argument("--dev", action="store_true", help="Enable development mode")
     parser.add_argument("--host", default="localhost", help="UI server host")
     parser.add_argument("--port", type=int, default=int(os.getenv("TORCALC_PORT", "3000")))
@@ -729,14 +862,16 @@ def main() -> int:
 
         devtools_enabled = _parse_bool(os.getenv("TORCALC_DEVTOOLS")) is True
         open_devtools_on_start = _parse_bool(os.getenv("TORCALC_OPEN_DEVTOOLS")) is True
-        webview_debug = bool(dev or devtools_enabled)
+        # Не включаем debug-режим webview автоматически даже при dev UI,
+        # чтобы devtools не открывался сам по себе.
+        webview_debug = bool(devtools_enabled)
 
         data_dir = get_data_dir()
         db_path = data_dir / "torcalc.db"
 
         api = DesktopApi(logger, data_dir=data_dir, db_path=db_path)
         window = webview.create_window(
-            title="TOR Calculator",
+            title=APP_NAME,
             url=target,
             width=1200,
             height=800,
@@ -747,7 +882,7 @@ def main() -> int:
             resizable=True,
             shadow=True,
             transparent=False,
-            background_color="#0f172a",
+            background_color="#0e0e0e",
         )
         api.bind_window(window)
 

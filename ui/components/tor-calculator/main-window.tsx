@@ -4,9 +4,10 @@ import { useState, useCallback } from "react"
 import { Sidebar } from "./sidebar"
 import { HomeTab } from "./tabs/home-tab"
 import { CalculatorTab } from "./tabs/calculator-tab"
+import { ItemsTab } from "./tabs/items-tab"
 import { SettingsTab } from "./tabs/settings-tab"
 
-type TabType = "home" | "calculator" | "settings"
+type TabType = "home" | "calculator" | "items" | "settings"
 
 export function MainWindow() {
   const [activeTab, setActiveTab] = useState<TabType>("home")
@@ -22,6 +23,8 @@ export function MainWindow() {
         return <HomeTab />
       case "calculator":
         return <CalculatorTab key={key} />
+      case "items":
+        return <ItemsTab key={key} />
       case "settings":
         return <SettingsTab onClearData={handleClearData} />
       default:
@@ -30,7 +33,7 @@ export function MainWindow() {
   }
 
   return (
-    <div className="flex h-full w-full bg-[#0f172a] animate-in fade-in duration-500">
+    <div className="flex h-full w-full bg-[#0e0e0e] animate-in fade-in duration-500">
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}

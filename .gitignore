@@ -9,6 +9,11 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+release/
+*.build/
+*.dist/
+*.onefile-build/
+nuitka-cache/
 *.log
 debug.log
 node_modules/
