@@ -5,6 +5,7 @@ import { MainWindow } from "./main-window"
 import { WindowTitlebar } from "./window-titlebar"
 import { WebTopbar } from "./web-topbar"
 import { isDesktop, onDesktopReady } from "@/lib/desktop-api"
+import { applySavedThemeColors, applySavedThemeColorsAsync } from "@/lib/accent-color"
 
 export function TorCalculatorApp() {
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -19,8 +20,13 @@ export function TorCalculatorApp() {
   })
 
   useEffect(() => {
-    const off = onDesktopReady(() => setMode("desktop"))
-    if (isDesktop()) setMode("desktop")
+    applySavedThemeColors()
+    const loadDesktopMode = () => {
+      setMode("desktop")
+      void applySavedThemeColorsAsync()
+    }
+    const off = onDesktopReady(loadDesktopMode)
+    if (isDesktop()) loadDesktopMode()
 
     const t = setTimeout(() => {
       setMode((m) => (m === "detecting" ? "web" : m))
@@ -39,15 +45,15 @@ export function TorCalculatorApp() {
   }, [mode])
 
   return (
-    <div className="h-screen w-screen bg-[#0e0e0e]">
-      <div className="h-full w-full overflow-hidden bg-[#0e0e0e] border border-[#2a2a2a]">
+    <div className="h-screen w-screen bg-[var(--tor-bg-dark)]">
+      <div className="h-full w-full overflow-hidden bg-[var(--tor-bg-dark)] border border-[var(--tor-border-soft)]">
         {mode === "desktop" ? <WindowTitlebar /> : <WebTopbar />}
         <div className={`${isTransitioning ? "opacity-0" : "opacity-100"} transition-opacity duration-300 h-[calc(100%-44px)]`}>
           {mode === "detecting" ? (
             <div className="h-full w-full flex items-center justify-center">
               <div className="text-center">
-                <div className="w-10 h-10 mx-auto rounded-full border-2 border-[#2a2a2a] border-t-[#e81c5a] animate-spin" />
-                <div className="mt-3 text-sm text-[#a3a3a3]">Загрузка...</div>
+                <div className="w-9 h-9 mx-auto rounded-full border-2 border-[var(--tor-border)] border-t-[var(--tor-accent)] animate-spin" />
+                <div className="mt-3 text-sm text-[#9b9b95]">Загрузка...</div>
               </div>
             </div>
           ) : (

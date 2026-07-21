@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, Calculator, ExternalLink } from "lucide-react"
+import { AlertCircle, Calculator, Database, ExternalLink, Package } from "lucide-react"
 import { useEffect, useState } from "react"
 import { callDesktop, isDesktop } from "@/lib/desktop-api"
 
@@ -26,77 +26,82 @@ export function HomeTab() {
 
   return (
     <div className="animate-in fade-in duration-300">
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-bold text-[#f5f5f5] mb-4">
-          Добро пожаловать в TorCalculator
-        </h1>
-        
-        <div className="bg-[#161616] rounded-xl p-6 border border-[#2a2a2a]">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <div className="w-12 h-12 rounded-lg bg-[#e81c5a]/20 flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-[#e81c5a]" />
+      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+        <div className="space-y-4">
+          <div className="bg-[var(--tor-bg-card)] rounded-lg p-6 border border-[var(--tor-border-soft)]">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-[#f2f0ec]">Быстрый старт</h2>
+                <p className="mt-1 text-sm text-[#9b9b95]">Основные сценарии собраны в двух рабочих разделах.</p>
+              </div>
+              <div className="rounded-full border border-[var(--tor-border)] px-3 py-1 text-xs text-[#9b9b95]">v0.0.3</div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-[var(--tor-border-soft)] bg-[var(--tor-bg-input)] p-4">
+                <Calculator className="mb-4 h-5 w-5 text-[#d56a72]" />
+                <div className="font-medium text-[#f2f0ec]">Сделки</div>
+                <p className="mt-1 text-sm leading-5 text-[#9b9b95]">Фиксируйте доходы, расходы и комментарии.</p>
+              </div>
+              <div className="rounded-lg border border-[var(--tor-border-soft)] bg-[var(--tor-bg-input)] p-4">
+                <Package className="mb-4 h-5 w-5 text-[#d56a72]" />
+                <div className="font-medium text-[#f2f0ec]">Имущество</div>
+                <p className="mt-1 text-sm leading-5 text-[#9b9b95]">Храните предметы, фото, цену покупки и продажу.</p>
               </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-[#f5f5f5] mb-2">
-                Информация о программе
-              </h2>
-              <p className="text-[#a3a3a3] leading-relaxed">
-                В данный момент программа находится в стадии разработки, 
-                возможно возникновение непредвиденных ошибок. В случае найденных 
-                багов просьба сообщить на сайт{" "}
-                <a
-                  href="https://triazov.ru"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#e81c5a] hover:underline inline-flex items-center gap-1"
-                >
-                  triazov.ru
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </p>
+          </div>
+
+          <div className="bg-[var(--tor-bg-card)] rounded-lg p-6 border border-[var(--tor-border-soft)]">
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-11 h-11 rounded-lg bg-[var(--tor-bg-soft)] flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-[#c84b55]" />
+                </div>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-[#f2f0ec] mb-2">
+                  Информация о программе
+                </h2>
+                <p className="text-[#9b9b95] leading-relaxed">
+                  В данный момент программа находится в стадии разработки,
+                  возможно возникновение непредвиденных ошибок. В случае найденных
+                  багов просьба сообщить на сайт{" "}
+                  <a
+                    href="https://triazov.ru"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#d56a72] hover:text-[#f2f0ec] inline-flex items-center gap-1"
+                  >
+                    triazov.ru
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 bg-gradient-to-r from-[#e81c5a]/12 to-[#e81c5a]/5 rounded-xl p-6 border border-[#e81c5a]/25">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <div className="w-12 h-12 rounded-lg bg-[#e81c5a]/20 flex items-center justify-center">
-                <Calculator className="w-6 h-6 text-[#e81c5a]" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-[#f5f5f5] mb-2">
-                Начните работу
-              </h2>
-              <p className="text-[#a3a3a3]">
-                Для подсчёта заработка откройте{" "}
-                <span className="text-[#e81c5a] font-medium">«Калькулятор»</span>, а предметы с фото и продажей — в{" "}
-                <span className="text-[#e81c5a] font-medium">«Предметы»</span>.
-              </p>
-            </div>
+        <div className="space-y-3">
+          <div className="bg-[var(--tor-bg-card)] rounded-lg p-4 border border-[var(--tor-border-soft)]">
+            <div className="text-xl font-semibold text-[#f2f0ec]">v0.0.3</div>
+            <div className="text-sm text-[#9b9b95]">Текущая версия</div>
           </div>
-        </div>
-
-        <div className="mt-8 grid grid-cols-3 gap-4">
-          <div className="bg-[#161616] rounded-lg p-4 border border-[#2a2a2a]">
-            <div className="text-2xl font-bold text-[#e81c5a]">v0.0.2</div>
-            <div className="text-sm text-[#a3a3a3]">Текущая версия</div>
+          <div className="bg-[var(--tor-bg-card)] rounded-lg p-4 border border-[var(--tor-border-soft)]">
+            <div className="text-xl font-semibold text-[#7fb89b]">Стабильно</div>
+            <div className="text-sm text-[#9b9b95]">Сохранение данных</div>
           </div>
-          <div className="bg-[#161616] rounded-lg p-4 border border-[#2a2a2a]">
-            <div className="text-2xl font-bold text-[#10b981]">Стабильно</div>
-            <div className="text-sm text-[#a3a3a3]">Сохранение данных</div>
+          <div className="bg-[var(--tor-bg-card)] rounded-lg p-4 border border-[var(--tor-border-soft)]">
+            <div className="text-xl font-semibold text-[#f2f0ec]">Desktop</div>
+            <div className="text-sm text-[#9b9b95]">Режим приложения</div>
           </div>
-          <div className="bg-[#161616] rounded-lg p-4 border border-[#2a2a2a]">
-            <div className="text-2xl font-bold text-[#e81c5a]">Desktop</div>
-            <div className="text-sm text-[#a3a3a3]">Режим приложения</div>
+          <div className="bg-[var(--tor-bg-card)] rounded-lg p-4 border border-[var(--tor-border-soft)]">
+            <Database className="mb-3 h-5 w-5 text-[#767a80]" />
+            <div className="text-sm font-medium text-[#f2f0ec]">Локальные данные</div>
+            <div className="mt-1 text-sm text-[#9b9b95]">База и резервные копии доступны в настройках.</div>
           </div>
         </div>
 
         {backendInfo?.dataDir && (
-          <div className="mt-4 text-xs text-[#737373]">
+          <div className="lg:col-span-2 text-xs text-[#767a80]">
             <div>Data dir: {backendInfo.dataDir}</div>
             {backendInfo.dbPath && <div>DB: {backendInfo.dbPath}</div>}
           </div>

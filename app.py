@@ -24,7 +24,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 UI_DIR = PROJECT_ROOT / "ui"
 LOG_FILE = PROJECT_ROOT / "debug.log"
 APP_NAME = "TorCalculator"
-APP_VERSION = "0.0.2"
+APP_WINDOW_TITLE = "TorCalculator - /promo ETTORE"
+APP_VERSION = "0.0.3"
 
 
 def setup_logging(debug: bool) -> logging.Logger:
@@ -435,6 +436,60 @@ class DesktopApi:
             "dbPath": str(self._db_path),
         }
 
+    def _next_transaction_id_unlocked(self) -> int:
+        tx_id = int(time.time() * 1000)
+        while self._conn.execute("SELECT 1 FROM transactions WHERE id = ?", (tx_id,)).fetchone():
+            tx_id += 1
+        return tx_id
+
+    def setting_get(self, key: str) -> dict:
+        try:
+            k = (key or "").strip()
+            if not k:
+                return {"ok": False, "error": "INVALID_KEY"}
+            with self._lock:
+                row = self._conn.execute(
+                    "SELECT value FROM settings WHERE key = ?",
+                    (k,),
+                ).fetchone()
+            return {"ok": True, "value": None if not row else str(row["value"])}
+        except Exception:
+            self._logger.exception("setting_get failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def setting_set(self, key: str, value: str) -> dict:
+        try:
+            k = (key or "").strip()
+            if not k:
+                return {"ok": False, "error": "INVALID_KEY"}
+            v = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+            with self._lock:
+                self._conn.execute(
+                    """
+                    INSERT INTO settings(key, value) VALUES (?, ?)
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                    """,
+                    (k, v),
+                )
+                self._conn.commit()
+            return {"ok": True}
+        except Exception:
+            self._logger.exception("setting_set failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def setting_delete(self, key: str) -> dict:
+        try:
+            k = (key or "").strip()
+            if not k:
+                return {"ok": False, "error": "INVALID_KEY"}
+            with self._lock:
+                self._conn.execute("DELETE FROM settings WHERE key = ?", (k,))
+                self._conn.commit()
+            return {"ok": True}
+        except Exception:
+            self._logger.exception("setting_delete failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
     def transactions_list(self) -> dict:
         try:
             with self._lock:
@@ -462,10 +517,10 @@ class DesktopApi:
             except Exception:
                 return {"ok": False, "error": "INVALID_AMOUNT"}
 
-            tx_id = int(time.time() * 1000)
             created_at = _utc_iso_now()
             comm = (comment or "").strip()
             with self._lock:
+                tx_id = self._next_transaction_id_unlocked()
                 self._conn.execute(
                     "INSERT INTO transactions(id, amount, comment, created_at) VALUES (?, ?, ?, ?)",
                     (tx_id, num, comm, created_at),
@@ -487,6 +542,16 @@ class DesktopApi:
             return {"ok": True, "deleted": cur.rowcount}
         except Exception:
             self._logger.exception("transaction_delete failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def transaction_history_clear(self) -> dict:
+        try:
+            with self._lock:
+                self._conn.execute("DELETE FROM transactions")
+                self._conn.commit()
+            return {"ok": True}
+        except Exception:
+            self._logger.exception("transaction_history_clear failed")
             return {"ok": False, "error": "INTERNAL_ERROR"}
 
     def transactions_clear(self) -> dict:
@@ -548,9 +613,9 @@ class DesktopApi:
             comm = f"Покупка предмета: {nm}"
             img = image_data if isinstance(image_data, str) else ""
             add_tx = bool(add_to_calculator)
-            tx_id = int(time.time() * 1000) if add_tx else 0
 
             with self._lock:
+                tx_id = self._next_transaction_id_unlocked() if add_tx else 0
                 if add_tx:
                     self._conn.execute(
                         "INSERT INTO transactions(id, amount, comment, created_at) VALUES (?, ?, ?, ?)",
@@ -598,6 +663,57 @@ class DesktopApi:
             return {"ok": True}
         except Exception:
             self._logger.exception("item_delete failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def item_update(self, item_id: int, name: str, purchase_price: float | str) -> dict:
+        try:
+            try:
+                price = float(purchase_price)
+            except Exception:
+                return {"ok": False, "error": "INVALID_PRICE"}
+            if price <= 0:
+                return {"ok": False, "error": "INVALID_PRICE"}
+            nm = (name or "").strip()
+            if not nm:
+                return {"ok": False, "error": "INVALID_NAME"}
+
+            with self._lock:
+                row = self._conn.execute(
+                    """
+                    SELECT id, image_data, purchased_at, purchase_tx_id
+                    FROM inventory_items
+                    WHERE id = ?
+                    """,
+                    (int(item_id),),
+                ).fetchone()
+                if not row:
+                    return {"ok": False, "error": "NOT_FOUND"}
+
+                purchase_tx_id = int(row["purchase_tx_id"])
+                self._conn.execute(
+                    "UPDATE inventory_items SET name = ?, purchase_price = ? WHERE id = ?",
+                    (nm, price, int(item_id)),
+                )
+                if purchase_tx_id > 0:
+                    self._conn.execute(
+                        "UPDATE transactions SET amount = ?, comment = ? WHERE id = ?",
+                        (-abs(price), f"Покупка предмета: {nm}", purchase_tx_id),
+                    )
+                self._conn.commit()
+
+            return {
+                "ok": True,
+                "item": {
+                    "id": int(item_id),
+                    "name": nm,
+                    "purchasePrice": price,
+                    "imageDataUrl": row["image_data"] or "",
+                    "purchasedAt": str(row["purchased_at"]),
+                    "purchaseTxId": purchase_tx_id,
+                },
+            }
+        except Exception:
+            self._logger.exception("item_update failed")
             return {"ok": False, "error": "INTERNAL_ERROR"}
 
     def _choose_save_path(self, *, default_name: str, file_types: list[str]) -> Optional[str]:
@@ -662,6 +778,9 @@ class DesktopApi:
                     FROM inventory_items ORDER BY purchased_at DESC
                     """
                 ).fetchall()
+                settings_rows = self._conn.execute(
+                    "SELECT key, value FROM settings ORDER BY key ASC"
+                ).fetchall()
 
             items = [
                 {
@@ -689,6 +808,7 @@ class DesktopApi:
                 "exportedAt": _utc_iso_now(),
                 "transactions": items,
                 "inventoryItems": inventory,
+                "settings": {str(r["key"]): str(r["value"]) for r in settings_rows},
             }
             Path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
             return {"ok": True, "path": path, "count": len(items)}
@@ -871,7 +991,7 @@ def main() -> int:
 
         api = DesktopApi(logger, data_dir=data_dir, db_path=db_path)
         window = webview.create_window(
-            title=APP_NAME,
+            title=APP_WINDOW_TITLE,
             url=target,
             width=1200,
             height=800,

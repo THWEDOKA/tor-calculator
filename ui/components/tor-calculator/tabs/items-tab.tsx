@@ -25,6 +25,16 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const LS_ITEMS = "tor-items"
 const LS_ITEMS_VIEW = "tor-items-view"
@@ -105,9 +115,13 @@ export function ItemsTab() {
   const [viewMode, setViewMode] = useState<ViewMode>("cards")
   const [calcMode, setCalcMode] = useState<CalcMode>("with")
   const [addOpen, setAddOpen] = useState(false)
-  const [detailItem, setDetailItem] = useState<InventoryItem | null>(null)
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null)
   const [sellPrice, setSellPrice] = useState("")
+  const [deleteItem, setDeleteItem] = useState<InventoryItem | null>(null)
+  const [editingItemId, setEditingItemId] = useState<number | null>(null)
+  const [editName, setEditName] = useState("")
+  const [editPrice, setEditPrice] = useState("")
+  const [editErrorId, setEditErrorId] = useState<number | null>(null)
   const [newName, setNewName] = useState("")
   const [newPrice, setNewPrice] = useState("")
   const [newImage, setNewImage] = useState<string>("")
@@ -300,8 +314,78 @@ export function ItemsTab() {
       if (!isDesktop()) persistItemsWeb(next)
       return next
     })
-    if (detailItem?.id === item.id) setDetailItem(null)
+    if (editingItemId === item.id) cancelEditing()
+    setDeleteItem(null)
     if (hasPurchaseTx) notifyTransactionsChanged()
+  }
+
+  const startEditing = (item: InventoryItem) => {
+    setEditingItemId(item.id)
+    setEditName(item.name)
+    setEditPrice(String(item.purchasePrice))
+    setEditErrorId(null)
+  }
+
+  const cancelEditing = () => {
+    setEditingItemId(null)
+    setEditName("")
+    setEditPrice("")
+    setEditErrorId(null)
+  }
+
+  const saveEditing = async (item: InventoryItem) => {
+    if (editingItemId !== item.id) return
+    const name = editName.trim()
+    const price = parseFloat(editPrice.replace(",", "."))
+    if (!name || Number.isNaN(price) || price <= 0) {
+      setEditErrorId(item.id)
+      setTimeout(() => setEditErrorId(null), 500)
+      return
+    }
+
+    const hasChanged = name !== item.name || price !== item.purchasePrice
+    if (!hasChanged) {
+      cancelEditing()
+      return
+    }
+
+    let updated: InventoryItem = { ...item, name, purchasePrice: price }
+    if (isDesktop()) {
+      const res = await callDesktop<{ ok: boolean; item?: any }>("item_update", item.id, name, price)
+      if (!(res as any).ok || !(res as any).item) {
+        setEditErrorId(item.id)
+        setTimeout(() => setEditErrorId(null), 500)
+        return
+      }
+      const it = (res as any).item
+      updated = {
+        id: Number(it.id),
+        name: String(it.name),
+        purchasePrice: Number(it.purchasePrice),
+        imageDataUrl: String(it.imageDataUrl ?? ""),
+        purchasedAt: String(it.purchasedAt),
+        purchaseTxId: Number(it.purchaseTxId),
+      }
+    } else if (item.purchaseTxId > 0) {
+      const saved = localStorage.getItem("tor-transactions")
+      if (saved) {
+        const list = JSON.parse(saved) as { id: number; amount: number; comment: string }[]
+        const nextTx = list.map((tx) =>
+          tx.id === item.purchaseTxId
+            ? { ...tx, amount: -Math.abs(price), comment: `Покупка предмета: ${name}` }
+            : tx
+        )
+        localStorage.setItem("tor-transactions", JSON.stringify(nextTx))
+      }
+    }
+
+    setItems((prev) => {
+      const next = prev.map((x) => (x.id === item.id ? updated : x))
+      if (!isDesktop()) persistItemsWeb(next)
+      return next
+    })
+    cancelEditing()
+    if (item.purchaseTxId > 0) notifyTransactionsChanged()
   }
 
   const confirmSell = async (e: React.FormEvent) => {
@@ -343,7 +427,6 @@ export function ItemsTab() {
       if (!isDesktop()) persistItemsWeb(next)
       return next
     })
-    if (detailItem?.id === sellItem.id) setDetailItem(null)
     setSellItem(null)
     setSellPrice("")
     setSellOverlay({
@@ -359,16 +442,18 @@ export function ItemsTab() {
   return (
     <div className="animate-in fade-in duration-300 h-full flex flex-col min-h-0">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-[#f5f5f5]">Имущество</h1>
+        <div className="text-sm text-[#9b9b95]">
+          {items.length > 0 ? `Всего предметов: ${items.length}` : "Инвентарь пока пуст"}
+        </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border border-[#2a2a2a] bg-[#161616] p-1">
+          <div className="flex items-center rounded-lg border border-[var(--tor-border)] bg-[var(--tor-bg-card)] p-1">
             <button
               type="button"
               onClick={() => setCalcMode("with")}
               className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm transition-colors ${
                 calcMode === "with"
-                  ? "bg-[#10b981]/20 text-[#f5f5f5]"
-                  : "text-[#a3a3a3] hover:text-[#f5f5f5]"
+                  ? "bg-[#7fb89b]/20 text-[#f2f0ec]"
+                  : "text-[#9b9b95] hover:text-[#f2f0ec]"
               }`}
               title="С занесением в калькулятор"
             >
@@ -379,8 +464,8 @@ export function ItemsTab() {
               onClick={() => setCalcMode("without")}
               className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm transition-colors ${
                 calcMode === "without"
-                  ? "bg-[#e81c5a]/20 text-[#f5f5f5]"
-                  : "text-[#a3a3a3] hover:text-[#f5f5f5]"
+                  ? "bg-[#c84b55]/20 text-[#f2f0ec]"
+                  : "text-[#9b9b95] hover:text-[#f2f0ec]"
               }`}
               title="Без занесения в калькулятор"
             >
@@ -388,14 +473,14 @@ export function ItemsTab() {
             </button>
           </div>
 
-          <div className="flex items-center rounded-lg border border-[#2a2a2a] bg-[#161616] p-1">
+          <div className="flex items-center rounded-lg border border-[var(--tor-border)] bg-[var(--tor-bg-card)] p-1">
             <button
               type="button"
               onClick={() => setViewMode("cards")}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
                 viewMode === "cards"
-                  ? "bg-[#e81c5a]/20 text-[#f5f5f5]"
-                  : "text-[#a3a3a3] hover:text-[#f5f5f5]"
+                  ? "bg-[#c84b55]/20 text-[#f2f0ec]"
+                  : "text-[#9b9b95] hover:text-[#f2f0ec]"
               }`}
               title="Карточки"
             >
@@ -407,8 +492,8 @@ export function ItemsTab() {
               onClick={() => setViewMode("list")}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
                 viewMode === "list"
-                  ? "bg-[#e81c5a]/20 text-[#f5f5f5]"
-                  : "text-[#a3a3a3] hover:text-[#f5f5f5]"
+                  ? "bg-[#c84b55]/20 text-[#f2f0ec]"
+                  : "text-[#9b9b95] hover:text-[#f2f0ec]"
               }`}
               title="Список"
             >
@@ -423,7 +508,7 @@ export function ItemsTab() {
               resetAddForm()
               setAddOpen(true)
             }}
-            className="bg-gradient-to-r from-[#e81c5a] to-[#b81448] hover:from-[#f02d68] hover:to-[#c4154a] text-white shadow-lg shadow-[#e81c5a]/20"
+            className="bg-[#c84b55] hover:bg-[#d55c66] text-white"
           >
             <Plus className="w-5 h-5 mr-2" />
             Добавить имущество
@@ -432,9 +517,9 @@ export function ItemsTab() {
       </div>
 
       {items.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center rounded-xl border border-[#2a2a2a] bg-[#161616] p-12 text-[#a3a3a3]">
-          <Package className="w-14 h-14 mb-4 opacity-40 text-[#e81c5a]" />
-          <p className="text-lg text-[#f5f5f5] font-medium">Пока нет имущества</p>
+        <div className="flex-1 flex flex-col items-center justify-center rounded-lg border border-[var(--tor-border)] bg-[var(--tor-bg-card)] p-12 text-[#9b9b95]">
+          <Package className="w-14 h-14 mb-4 opacity-40 text-[#c84b55]" />
+          <p className="text-lg text-[#f2f0ec] font-medium">Пока нет имущества</p>
           <p className="text-sm mt-2 text-center max-w-sm">
             Добавьте имущество с ценой покупки и при желании вставьте фото из буфера (Ctrl+V) в форме добавления.
           </p>
@@ -443,135 +528,237 @@ export function ItemsTab() {
         <>
           {viewMode === "cards" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setDetailItem(item)}
-                  onKeyDown={(ev) => {
-                    if (ev.key === "Enter" || ev.key === " ") {
-                      ev.preventDefault()
-                      setDetailItem(item)
-                    }
-                  }}
-                  className="group relative rounded-xl border border-[#2a2a2a] bg-[#161616] overflow-hidden transition-all duration-300 hover:border-[#e81c5a]/40 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#e81c5a]/10 cursor-pointer text-left"
-                >
-                  <div className="aspect-[4/3] bg-[#0e0e0e] relative">
-                    {item.imageDataUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.imageDataUrl}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#525252]">
-                        <ImageIcon className="w-12 h-12 opacity-50" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="font-semibold text-[#f5f5f5] line-clamp-2 mb-1">{item.name}</div>
-                    <div className="text-[#e81c5a] font-bold">{formatMoney(item.purchasePrice)}</div>
-                    <div className="text-xs text-[#737373] mt-2">Нажмите карточку для подробностей</div>
-                  </div>
+              {items.map((item) => {
+                const isEditing = editingItemId === item.id
+                return (
                   <div
-                    className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(ev) => ev.stopPropagation()}
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (!isEditing) startEditing(item)
+                    }}
+                    onKeyDown={(ev) => {
+                      if (isEditing) return
+                      if (ev.key === "Enter" || ev.key === " ") {
+                        ev.preventDefault()
+                        startEditing(item)
+                      }
+                    }}
+                    className={`group flex min-h-full flex-col rounded-lg border bg-[var(--tor-bg-card)] overflow-hidden transition-all duration-200 cursor-pointer text-left ${
+                      isEditing ? "border-[#c84b55]/60" : "border-[var(--tor-border)] hover:border-[var(--tor-border-strong)]"
+                    }`}
                   >
-                    <button
-                      type="button"
-                      title="Продать"
-                      onClick={() => {
-                        setSellItem(item)
-                        setSellPrice("")
-                      }}
-                      className="p-2 rounded-lg bg-[#e81c5a] text-white hover:bg-[#f02d68] shadow-md"
-                    >
-                      <Banknote className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Удалить"
-                      onClick={() => void handleDelete(item)}
-                      className="p-2 rounded-lg bg-red-500/90 text-white hover:bg-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="aspect-[4/3] bg-[var(--tor-bg-input)] relative">
+                      {item.imageDataUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.imageDataUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#525252]">
+                          <ImageIcon className="w-12 h-12 opacity-50" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col p-4">
+                      {isEditing ? (
+                        <div
+                          className="space-y-2"
+                          onClick={(ev) => ev.stopPropagation()}
+                          onBlur={(ev) => {
+                            const nextFocus = ev.relatedTarget as Node | null
+                            if (!nextFocus || !ev.currentTarget.contains(nextFocus)) {
+                              void saveEditing(item)
+                            }
+                          }}
+                          onKeyDown={(ev) => {
+                            if (ev.key === "Escape") {
+                              ev.preventDefault()
+                              cancelEditing()
+                            }
+                            if (ev.key === "Enter") {
+                              ev.preventDefault()
+                              void saveEditing(item)
+                            }
+                          }}
+                        >
+                          <Input
+                            autoFocus
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            className={`h-9 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] font-semibold ${
+                              editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
+                            }`}
+                          />
+                          <Input
+                            value={editPrice}
+                            onChange={(e) => setEditPrice(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            inputMode="decimal"
+                            className={`h-9 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#c84b55] font-bold ${
+                              editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
+                            }`}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="font-semibold text-[#f2f0ec] line-clamp-2 mb-1">{item.name}</div>
+                          <div className="text-[#d56a72] font-semibold">{formatMoney(item.purchasePrice)}</div>
+                          <div className="text-xs text-[#767a80] mt-2">Нажмите карточку для редактирования</div>
+                        </>
+                      )}
+                      <div className="mt-auto pt-4 flex items-center gap-2" onClick={(ev) => ev.stopPropagation()}>
+                        <button
+                          type="button"
+                          title="Продать"
+                          onClick={() => {
+                            setSellItem(item)
+                            setSellPrice("")
+                          }}
+                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#c84b55] px-3 py-2 text-sm font-medium text-white hover:bg-[#d55c66]"
+                        >
+                          <Banknote className="w-4 h-4" />
+                          Продать
+                        </button>
+                        <button
+                          type="button"
+                          title="Удалить"
+                          onClick={() => setDeleteItem(item)}
+                          className="inline-flex items-center justify-center rounded-lg bg-[var(--tor-bg-soft)] p-2.5 text-[#d56a72] hover:bg-[var(--tor-bg-control)]"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="space-y-2 pb-4">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setDetailItem(item)}
-                  onKeyDown={(ev) => {
-                    if (ev.key === "Enter" || ev.key === " ") {
-                      ev.preventDefault()
-                      setDetailItem(item)
-                    }
-                  }}
-                  className="group flex items-center gap-4 rounded-xl border border-[#2a2a2a] bg-[#161616] p-3 transition-all duration-300 hover:border-[#e81c5a]/40 hover:shadow-lg hover:shadow-[#e81c5a]/10 cursor-pointer"
-                >
-                  <div className="h-16 w-16 rounded-lg overflow-hidden bg-[#0e0e0e] shrink-0">
-                    {item.imageDataUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.imageDataUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-[#525252]">
-                        <ImageIcon className="w-6 h-6 opacity-60" />
-                      </div>
-                    )}
-                  </div>
+              {items.map((item) => {
+                const isEditing = editingItemId === item.id
+                return (
+                  <div
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (!isEditing) startEditing(item)
+                    }}
+                    onKeyDown={(ev) => {
+                      if (isEditing) return
+                      if (ev.key === "Enter" || ev.key === " ") {
+                        ev.preventDefault()
+                        startEditing(item)
+                      }
+                    }}
+                    className={`group flex items-center gap-4 rounded-lg border bg-[var(--tor-bg-card)] p-3 transition-all duration-200 cursor-pointer ${
+                      isEditing ? "border-[#c84b55]/60" : "border-[var(--tor-border)] hover:border-[var(--tor-border-strong)]"
+                    }`}
+                  >
+                    <div className="h-16 w-16 rounded-lg overflow-hidden bg-[var(--tor-bg-input)] shrink-0">
+                      {item.imageDataUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.imageDataUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-[#525252]">
+                          <ImageIcon className="w-6 h-6 opacity-60" />
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-[#f5f5f5] truncate">{item.name}</div>
-                    <div className="text-[#e81c5a] font-semibold">{formatMoney(item.purchasePrice)}</div>
-                    <div className="text-xs text-[#737373] mt-1">{formatDateTime(item.purchasedAt)}</div>
-                  </div>
+                    <div className="min-w-0 flex-1">
+                      {isEditing ? (
+                        <div
+                          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_140px]"
+                          onClick={(ev) => ev.stopPropagation()}
+                          onBlur={(ev) => {
+                            const nextFocus = ev.relatedTarget as Node | null
+                            if (!nextFocus || !ev.currentTarget.contains(nextFocus)) {
+                              void saveEditing(item)
+                            }
+                          }}
+                          onKeyDown={(ev) => {
+                            if (ev.key === "Escape") {
+                              ev.preventDefault()
+                              cancelEditing()
+                            }
+                            if (ev.key === "Enter") {
+                              ev.preventDefault()
+                              void saveEditing(item)
+                            }
+                          }}
+                        >
+                          <Input
+                            autoFocus
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            className={`h-9 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] font-semibold ${
+                              editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
+                            }`}
+                          />
+                          <Input
+                            value={editPrice}
+                            onChange={(e) => setEditPrice(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            inputMode="decimal"
+                            className={`h-9 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#c84b55] font-semibold ${
+                              editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
+                            }`}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="font-semibold text-[#f2f0ec] truncate">{item.name}</div>
+                          <div className="text-[#d56a72] font-semibold">{formatMoney(item.purchasePrice)}</div>
+                        </>
+                      )}
+                      <div className="text-xs text-[#767a80] mt-1">{formatDateTime(item.purchasedAt)}</div>
+                    </div>
 
-                  <div className="flex items-center gap-1.5" onClick={(ev) => ev.stopPropagation()}>
-                    <button
-                      type="button"
-                      title="Продать"
-                      onClick={() => {
-                        setSellItem(item)
-                        setSellPrice("")
-                      }}
-                      className="p-2 rounded-lg bg-[#e81c5a] text-white hover:bg-[#f02d68] shadow-md"
-                    >
-                      <Banknote className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Удалить"
-                      onClick={() => void handleDelete(item)}
-                      className="p-2 rounded-lg bg-red-500/90 text-white hover:bg-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1.5" onClick={(ev) => ev.stopPropagation()}>
+                      <button
+                        type="button"
+                        title="Продать"
+                        onClick={() => {
+                          setSellItem(item)
+                          setSellPrice("")
+                        }}
+                        className="p-2 rounded-lg bg-[#c84b55] text-white hover:bg-[#d55c66]"
+                      >
+                        <Banknote className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Удалить"
+                        onClick={() => setDeleteItem(item)}
+                        className="p-2 rounded-lg bg-[var(--tor-bg-soft)] text-[#d56a72] hover:bg-[var(--tor-bg-control)]"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </>
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="bg-[#161616] border-[#2a2a2a] text-[#f5f5f5] sm:max-w-md">
+        <DialogContent className="bg-[var(--tor-bg-card)] border-[var(--tor-border)] text-[#f2f0ec] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Новое имущество</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAddItem} className="space-y-4">
             <div>
-              <Label htmlFor="item-name" className="text-[#a3a3a3]">
+              <Label htmlFor="item-name" className="text-[#9b9b95]">
                 Название
               </Label>
               <Input
@@ -579,11 +766,11 @@ export function ItemsTab() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Например, видеокарта"
-                className="mt-1.5 bg-[#0e0e0e] border-[#2a2a2a] text-[#f5f5f5]"
+                className="mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec]"
               />
             </div>
             <div>
-              <Label htmlFor="item-price" className="text-[#a3a3a3]">
+              <Label htmlFor="item-price" className="text-[#9b9b95]">
                 Цена покупки ($)
               </Label>
               <Input
@@ -591,17 +778,17 @@ export function ItemsTab() {
                 value={newPrice}
                 onChange={(e) => setNewPrice(e.target.value)}
                 placeholder="15000"
-                className={`mt-1.5 bg-[#0e0e0e] border-[#2a2a2a] text-[#f5f5f5] ${addError ? "border-red-500 animate-shake" : ""}`}
+                className={`mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] ${addError ? "border-[#c84b55] animate-shake" : ""}`}
               />
             </div>
             <div>
-              <Label className="text-[#a3a3a3]">Фото (Ctrl+V)</Label>
+              <Label className="text-[#9b9b95]">Фото (Ctrl+V)</Label>
               <div
                 ref={pasteRef}
                 tabIndex={0}
                 onPaste={handlePaste}
-                className={`mt-1.5 rounded-lg border-2 border-dashed min-h-[140px] flex flex-col items-center justify-center gap-2 p-4 outline-none focus:ring-2 focus:ring-[#e81c5a]/50 transition-colors ${
-                  newImage ? "border-[#e81c5a]/50 bg-[#0e0e0e]" : "border-[#2a2a2a] bg-[#0e0e0e] hover:border-[#404040]"
+                className={`mt-1.5 rounded-lg border-2 border-dashed min-h-[140px] flex flex-col items-center justify-center gap-2 p-4 outline-none focus:ring-2 focus:ring-[#c84b55]/50 transition-colors ${
+                  newImage ? "border-[#c84b55]/50 bg-[var(--tor-bg-input)]" : "border-[var(--tor-border)] bg-[var(--tor-bg-input)] hover:border-[var(--tor-border-strong)]"
                 }`}
               >
                 {newImage ? (
@@ -609,8 +796,8 @@ export function ItemsTab() {
                   <img src={newImage} alt="" className="max-h-28 max-w-full object-contain rounded-md" />
                 ) : (
                   <>
-                    <ClipboardPaste className="w-8 h-8 text-[#737373]" />
-                    <span className="text-sm text-[#737373] text-center">
+                    <ClipboardPaste className="w-8 h-8 text-[#767a80]" />
+                    <span className="text-sm text-[#767a80] text-center">
                       Кликните сюда и вставьте картинку из буфера
                     </span>
                   </>
@@ -621,7 +808,7 @@ export function ItemsTab() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="mt-2 text-[#a3a3a3]"
+                  className="mt-2 text-[#9b9b95]"
                   onClick={() => setNewImage("")}
                 >
                   Убрать фото
@@ -629,10 +816,10 @@ export function ItemsTab() {
               )}
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="secondary" onClick={() => setAddOpen(false)} className="bg-[#2a2a2a] text-[#f5f5f5]">
+              <Button type="button" variant="secondary" onClick={() => setAddOpen(false)} className="bg-[var(--tor-bg-control)] text-[#f2f0ec]">
                 Отмена
               </Button>
-              <Button type="submit" className="bg-[#e81c5a] hover:bg-[#f02d68] text-white">
+              <Button type="submit" className="bg-[#c84b55] hover:bg-[#d55c66] text-white">
                 Сохранить
               </Button>
             </DialogFooter>
@@ -640,76 +827,14 @@ export function ItemsTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!detailItem} onOpenChange={(o) => !o && setDetailItem(null)}>
-        <DialogContent className="bg-[#161616] border-[#2a2a2a] text-[#f5f5f5] sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          {detailItem && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="pr-8">{detailItem.name}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                {detailItem.imageDataUrl ? (
-                  <div className="rounded-lg overflow-hidden border border-[#2a2a2a] bg-[#0e0e0e]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={detailItem.imageDataUrl}
-                      alt=""
-                      className="w-full max-h-64 object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-[#2a2a2a] bg-[#0e0e0e] h-40 flex items-center justify-center text-[#525252]">
-                    Нет изображения
-                  </div>
-                )}
-                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-                  <dt className="text-[#737373]">Цена покупки</dt>
-                  <dd className="text-[#e81c5a] font-semibold">{formatMoney(detailItem.purchasePrice)}</dd>
-                  <dt className="text-[#737373]">Время покупки</dt>
-                  <dd>{formatDateTime(detailItem.purchasedAt)}</dd>
-                  <dt className="text-[#737373]">В инвентаре</dt>
-                  <dd>{formatHeldDuration(detailItem.purchasedAt)}</dd>
-                  <dt className="text-[#737373]">ID записи</dt>
-                  <dd className="text-[#a3a3a3] font-mono text-xs">{detailItem.id}</dd>
-                </dl>
-              </div>
-              <DialogFooter className="flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="bg-[#2a2a2a] text-[#f5f5f5]"
-                  onClick={() => {
-                    setSellItem(detailItem)
-                    setSellPrice("")
-                  }}
-                >
-                  <Banknote className="w-4 h-4 mr-2" />
-                  Продать
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => {
-                    void handleDelete(detailItem)
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Удалить
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={!!sellItem} onOpenChange={(o) => !o && setSellItem(null)}>
-        <DialogContent className="bg-[#161616] border-[#2a2a2a] text-[#f5f5f5] sm:max-w-md">
+        <DialogContent className="bg-[var(--tor-bg-card)] border-[var(--tor-border)] text-[#f2f0ec] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Продажа: {sellItem?.name}</DialogTitle>
           </DialogHeader>
           <form onSubmit={confirmSell} className="space-y-4">
             <div>
-              <Label htmlFor="sell-price" className="text-[#a3a3a3]">
+              <Label htmlFor="sell-price" className="text-[#9b9b95]">
                 Цена продажи ($)
               </Label>
               <Input
@@ -718,10 +843,10 @@ export function ItemsTab() {
                 value={sellPrice}
                 onChange={(e) => setSellPrice(e.target.value)}
                 placeholder="Сколько получили"
-                className="mt-1.5 bg-[#0e0e0e] border-[#2a2a2a] text-[#f5f5f5]"
+                className="mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec]"
               />
               {sellItem && (
-                <p className="text-xs text-[#737373] mt-2">
+                <p className="text-xs text-[#767a80] mt-2">
                   {calcMode === "with"
                     ? `Закупка ${formatMoney(sellItem.purchasePrice)} уже в расходах. После продажи сумма ниже попадёт в доходы.`
                     : "Сделка пройдёт только в имуществе, без записи в калькулятор."}
@@ -729,10 +854,10 @@ export function ItemsTab() {
               )}
             </div>
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setSellItem(null)} className="bg-[#2a2a2a] text-[#f5f5f5]">
+              <Button type="button" variant="secondary" onClick={() => setSellItem(null)} className="bg-[var(--tor-bg-control)] text-[#f2f0ec]">
                 Отмена
               </Button>
-              <Button type="submit" className="bg-[#e81c5a] hover:bg-[#f02d68] text-white">
+              <Button type="submit" className="bg-[#c84b55] hover:bg-[#d55c66] text-white">
                 Подтвердить продажу
               </Button>
             </DialogFooter>
@@ -740,26 +865,54 @@ export function ItemsTab() {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={!!deleteItem} onOpenChange={(open) => !open && setDeleteItem(null)}>
+        <AlertDialogContent className="bg-[var(--tor-bg-card)] border-[var(--tor-border)] text-[#f2f0ec]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить предмет?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#9b9b95]">
+              {deleteItem
+                ? `“${deleteItem.name}” будет удалён из имущества${
+                    deleteItem.purchaseTxId > 0 ? " вместе с расходом покупки в калькуляторе" : ""
+                  }.`
+                : "Предмет будет удалён из имущества."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[var(--tor-bg-control)] border-[var(--tor-border-strong)] text-[#f2f0ec] hover:bg-[var(--tor-bg-control-hover)]">
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#c84b55] text-white hover:bg-[#b9434d]"
+              onClick={() => {
+                if (deleteItem) void handleDelete(deleteItem)
+              }}
+            >
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {sellOverlay && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 animate-in fade-in duration-200">
-          <div className="relative animate-sell-success mx-4 max-w-md w-full rounded-2xl border border-[#e81c5a]/40 bg-[#161616] p-8 text-center shadow-2xl shadow-[#e81c5a]/20">
+          <div className="relative animate-sell-success mx-4 max-w-md w-full rounded-lg border border-[var(--tor-border)] bg-[var(--tor-bg-card)] p-8 text-center">
             <button
               type="button"
-              className="absolute top-4 right-4 p-2 rounded-lg text-[#737373] hover:bg-[#2a2a2a] hover:text-[#f5f5f5]"
+              className="absolute top-4 right-4 p-2 rounded-lg text-[#767a80] hover:bg-[var(--tor-bg-control)] hover:text-[#f2f0ec]"
               aria-label="Закрыть"
               onClick={() => setSellOverlay(null)}
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="inline-flex rounded-full bg-[#e81c5a]/20 p-4 mb-4">
-              <CheckCircle2 className="w-14 h-14 text-[#e81c5a]" />
+            <div className="inline-flex rounded-full bg-[#c84b55]/20 p-4 mb-4">
+              <CheckCircle2 className="w-14 h-14 text-[#c84b55]" />
             </div>
-            <h3 className="text-2xl font-bold text-[#f5f5f5] mb-2">Продано!</h3>
-            <p className="text-[#e81c5a] text-lg font-semibold mb-1">{formatMoney(sellOverlay.saleAmount)}</p>
-            <p className="text-[#a3a3a3] text-sm mb-4">
-              Предмет был у вас: <span className="text-[#f5f5f5] font-medium">{sellOverlay.heldLabel}</span>
+            <h3 className="text-2xl font-bold text-[#f2f0ec] mb-2">Продано!</h3>
+            <p className="text-[#c84b55] text-lg font-semibold mb-1">{formatMoney(sellOverlay.saleAmount)}</p>
+            <p className="text-[#9b9b95] text-sm mb-4">
+              Предмет был у вас: <span className="text-[#f2f0ec] font-medium">{sellOverlay.heldLabel}</span>
             </p>
-            <p className="text-xs text-[#737373]">
+            <p className="text-xs text-[#767a80]">
               {sellOverlay.savedToCalculator
                 ? `Закупка ${formatMoney(sellOverlay.purchasePrice)} учтена в расходах, выручка — в доходах калькулятора.`
                 : "Продажа сохранена только в имуществе, без записи в калькулятор."}

@@ -4,38 +4,53 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0e0e0e;
+  --background: #f6f5f2;
+  --foreground: #151515;
   --card: #ffffff;
-  --card-foreground: #0e0e0e;
+  --card-foreground: #151515;
   --popover: #ffffff;
-  --popover-foreground: #0e0e0e;
-  --primary: #e81c5a;
+  --popover-foreground: #151515;
+  --primary: #c84b55;
   --primary-foreground: #ffffff;
   --secondary: #e2e8f0;
-  --secondary-foreground: #0e0e0e;
+  --secondary-foreground: #151515;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #e81c5a;
+  --accent: #c84b55;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #e81c5a;
+  --ring: #c84b55;
   --radius: 0.5rem;
   
-  --tor-bg-dark: #0e0e0e;
-  --tor-bg-card: #161616;
-  --tor-accent-blue: #e81c5a;
-  --tor-accent-violet: #b81448;
-  --tor-accent-green: #10b981;
-  --tor-text-primary: #f5f5f5;
-  --tor-text-secondary: #a3a3a3;
-  --tor-positive: #1e3a1e;
-  --tor-negative: #3a1e1e;
-  --tor-positive-border: #22c55e;
-  --tor-negative-border: #ef4444;
+  --tor-bg-dark: #101113;
+  --tor-bg-window: #101113;
+  --tor-bg-window-soft: #151719;
+  --tor-bg-card: #181a1d;
+  --tor-bg-input: #0f1012;
+  --tor-bg-soft: #202328;
+  --tor-bg-control: #2b2e33;
+  --tor-bg-control-hover: #30343a;
+  --tor-border: #2b2e33;
+  --tor-border-soft: #25282d;
+  --tor-border-strong: #3a3f46;
+  --tor-accent-blue: #c84b55;
+  --tor-accent-violet: #9f3d48;
+  --tor-accent: #c84b55;
+  --tor-accent-strong: #d56a72;
+  --tor-accent-hover: #d55c66;
+  --tor-accent-dark: #64262b;
+  --tor-accent-bg: rgba(200, 75, 85, 0.16);
+  --tor-accent-bg-strong: rgba(200, 75, 85, 0.26);
+  --tor-accent-green: #7fb89b;
+  --tor-text-primary: #f2f0ec;
+  --tor-text-secondary: #9b9b95;
+  --tor-positive: #18231f;
+  --tor-negative: #271b1d;
+  --tor-positive-border: #7fb89b;
+  --tor-negative-border: #c84b55;
 
   /* Shadcn/ui default variables (preserving user's existing colors) */
   --chart-1: oklch(0.646 0.222 41.116);
@@ -54,25 +69,31 @@
 }
 
 .dark {
-  --background: #0e0e0e;
-  --foreground: #f5f5f5;
-  --card: #161616;
-  --card-foreground: #f5f5f5;
-  --popover: #161616;
-  --popover-foreground: #f5f5f5;
-  --primary: #e81c5a;
+  --background: #101113;
+  --foreground: #f2f0ec;
+  --card: #181a1d;
+  --card-foreground: #f2f0ec;
+  --popover: #181a1d;
+  --popover-foreground: #f2f0ec;
+  --primary: #c84b55;
   --primary-foreground: #ffffff;
-  --secondary: #2a2a2a;
-  --secondary-foreground: #f5f5f5;
-  --muted: #2a2a2a;
-  --muted-foreground: #a3a3a3;
-  --accent: #e81c5a;
+  --secondary: #24272c;
+  --secondary-foreground: #f2f0ec;
+  --muted: #24272c;
+  --muted-foreground: #9b9b95;
+  --accent: #c84b55;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #2a2a2a;
-  --input: #2a2a2a;
-  --ring: #e81c5a;
+  --border: #2b2e33;
+  --input: #2b2e33;
+  --ring: #c84b55;
+  --tor-accent: #c84b55;
+  --tor-accent-strong: #d56a72;
+  --tor-accent-hover: #d55c66;
+  --tor-accent-dark: #64262b;
+  --tor-accent-bg: rgba(200, 75, 85, 0.16);
+  --tor-accent-bg-strong: rgba(200, 75, 85, 0.26);
 
   /* Shadcn/ui default variables (preserving user's existing colors) */
   --chart-1: oklch(0.488 0.243 264.376);
@@ -142,7 +163,7 @@
 
 /* Desktop (pywebview) - transparent window background for rounded corners */
 body.tor-desktop {
-  background: #0e0e0e !important;
+  background: var(--tor-bg-dark) !important;
 }
 
 /* TorCalculator Custom Animations */
@@ -250,13 +271,12 @@ body.tor-desktop {
 }
 
 .tor-logo-shell {
-  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  transition: transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease;
 }
 
 .tor-logo-shell:hover {
-  transform: translateY(-1px) scale(1.03);
-  border-color: rgba(232, 28, 90, 0.75);
-  box-shadow: 0 0 18px rgba(232, 28, 90, 0.25);
+  transform: translateY(-1px);
+  border-color: rgba(200, 75, 85, 0.55);
 }
 
 .tor-logo-image {
@@ -278,10 +298,10 @@ body.tor-desktop {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: #30343a;
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #525252;
+  background: #454a52;
 }
