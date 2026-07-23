@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import atexit
+import base64
 import json
 import logging
 from logging.handlers import RotatingFileHandler
+import mimetypes
 import os
 from pathlib import Path
 import shutil
@@ -25,7 +27,14 @@ UI_DIR = PROJECT_ROOT / "ui"
 LOG_FILE = PROJECT_ROOT / "debug.log"
 APP_NAME = "TorCalculator"
 APP_WINDOW_TITLE = "TorCalculator - /promo ETTORE"
-APP_VERSION = "0.0.3"
+APP_VERSION = "0.0.4"
+SOUNDS_DIR = PROJECT_ROOT / "sounds"
+SOUND_ACTION_DIRS = {
+    "add": SOUNDS_DIR / "transaction-add",
+    "delete": SOUNDS_DIR / "transaction-delete",
+}
+SUPPORTED_SOUND_EXTENSIONS = {".wav", ".mp3", ".ogg", ".m4a", ".aac", ".flac"}
+MAX_SOUND_FILE_BYTES = 12 * 1024 * 1024
 
 
 def setup_logging(debug: bool) -> logging.Logger:
@@ -245,7 +254,15 @@ def start_next_server(
     pm = _pick_package_manager(logger)
 
     if pm[0].lower().startswith("pnpm"):
-        cmd = pm + ["-C", str(ui_dir), "dev" if dev else "start", "--", "-p", str(port)]
+        cmd = pm + [
+            "-C",
+            str(ui_dir),
+            "exec",
+            "next",
+            "dev" if dev else "start",
+            "-p",
+            str(port),
+        ]
     else:
         cmd = pm + [
             "--prefix",
@@ -435,6 +452,48 @@ class DesktopApi:
             "dataDir": str(self._data_dir),
             "dbPath": str(self._db_path),
         }
+
+    def sound_files_list(self, action: str) -> dict:
+        try:
+            folder = SOUND_ACTION_DIRS.get((action or "").strip().lower())
+            if folder is None:
+                return {"ok": False, "error": "INVALID_SOUND_ACTION"}
+            folder.mkdir(parents=True, exist_ok=True)
+            items = [
+                {"name": path.name, "size": path.stat().st_size}
+                for path in folder.iterdir()
+                if path.is_file() and path.suffix.lower() in SUPPORTED_SOUND_EXTENSIONS
+            ]
+            items.sort(key=lambda item: item["name"].casefold())
+            for index, item in enumerate(items, start=1):
+                item["label"] = f"Звук {index}"
+            return {"ok": True, "items": items}
+        except Exception:
+            self._logger.exception("sound_files_list failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def sound_file_data(self, action: str, filename: str) -> dict:
+        try:
+            folder = SOUND_ACTION_DIRS.get((action or "").strip().lower())
+            safe_name = Path(filename or "").name
+            if folder is None or not safe_name or safe_name != filename:
+                return {"ok": False, "error": "INVALID_SOUND_FILE"}
+            path = folder / safe_name
+            if path.suffix.lower() not in SUPPORTED_SOUND_EXTENSIONS or not path.is_file():
+                return {"ok": False, "error": "SOUND_NOT_FOUND"}
+            size = path.stat().st_size
+            if size > MAX_SOUND_FILE_BYTES:
+                return {"ok": False, "error": "SOUND_TOO_LARGE"}
+            mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+            encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+            return {
+                "ok": True,
+                "name": path.name,
+                "dataUrl": f"data:{mime};base64,{encoded}",
+            }
+        except Exception:
+            self._logger.exception("sound_file_data failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
 
     def _next_transaction_id_unlocked(self) -> int:
         tx_id = int(time.time() * 1000)

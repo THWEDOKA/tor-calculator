@@ -30,3 +30,9 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Локальные звуки релиза: попадают в EXE, но не в Git.
+/sounds/transaction-add/*
+!/sounds/transaction-add/README.txt
+/sounds/transaction-delete/*
+!/sounds/transaction-delete/README.txt

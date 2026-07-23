@@ -34,7 +34,7 @@ export function HomeTab() {
                 <h2 className="text-lg font-semibold text-[#f2f0ec]">Быстрый старт</h2>
                 <p className="mt-1 text-sm text-[#9b9b95]">Основные сценарии собраны в двух рабочих разделах.</p>
               </div>
-              <div className="rounded-full border border-[var(--tor-border)] px-3 py-1 text-xs text-[#9b9b95]">v0.0.3</div>
+              <div className="rounded-full border border-[var(--tor-border)] px-3 py-1 text-xs text-[#9b9b95]">v0.0.4</div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg border border-[var(--tor-border-soft)] bg-[var(--tor-bg-input)] p-4">
@@ -82,7 +82,7 @@ export function HomeTab() {
 
         <div className="space-y-3">
           <div className="bg-[var(--tor-bg-card)] rounded-lg p-4 border border-[var(--tor-border-soft)]">
-            <div className="text-xl font-semibold text-[#f2f0ec]">v0.0.3</div>
+            <div className="text-xl font-semibold text-[#f2f0ec]">v0.0.4</div>
             <div className="text-sm text-[#9b9b95]">Текущая версия</div>
           </div>
           <div className="bg-[var(--tor-bg-card)] rounded-lg p-4 border border-[var(--tor-border-soft)]">

@@ -10,8 +10,12 @@ import {
   AlertTriangle,
   X,
   Palette,
+  SlidersHorizontal,
+  Volume2,
 } from "lucide-react"
 import { callDesktop, isDesktop } from "@/lib/desktop-api"
+import { SoundSettings } from "@/components/tor-calculator/sound-settings"
+import { playActionSound } from "@/lib/sound-settings"
 import {
   ACCENT_PRESETS,
   BACKGROUND_PRESETS,
@@ -28,6 +32,7 @@ interface SettingsTabProps {
 
 export function SettingsTab({ onClearData }: SettingsTabProps) {
   const [showClearModal, setShowClearModal] = useState(false)
+  const [section, setSection] = useState<"general" | "sounds">("general")
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT_COLOR)
   const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR)
 
@@ -93,6 +98,7 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
       localStorage.removeItem("tor-items")
       onClearData()
       setShowClearModal(false)
+      void playActionSound("delete")
     }
     void run()
   }
@@ -124,6 +130,42 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
 
   return (
     <div className="animate-in fade-in duration-300">
+      <nav
+        aria-label="Разделы настроек"
+        className="mb-6 inline-flex rounded-lg border border-[var(--tor-border-soft)] bg-[var(--tor-bg-card)] p-1"
+      >
+        <button
+          type="button"
+          onClick={() => setSection("general")}
+          aria-current={section === "general" ? "page" : undefined}
+          className={`inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-medium transition-colors ${
+            section === "general"
+              ? "bg-[var(--tor-bg-soft)] text-[#f2f0ec]"
+              : "text-[#9b9b95] hover:text-[#f2f0ec]"
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Основные
+        </button>
+        <button
+          type="button"
+          onClick={() => setSection("sounds")}
+          aria-current={section === "sounds" ? "page" : undefined}
+          className={`inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-medium transition-colors ${
+            section === "sounds"
+              ? "bg-[var(--tor-bg-soft)] text-[#f2f0ec]"
+              : "text-[#9b9b95] hover:text-[#f2f0ec]"
+          }`}
+        >
+          <Volume2 className="h-4 w-4" />
+          Звуки
+        </button>
+      </nav>
+
+      {section === "sounds" ? (
+        <SoundSettings />
+      ) : (
+      <>
       <div className="grid grid-cols-2 gap-6">
         <div className="space-y-6">
           <div className="bg-[var(--tor-bg-card)] rounded-lg p-6 border border-[var(--tor-border-soft)]">
@@ -270,7 +312,7 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
               </div>
               <div className="flex justify-between items-center py-3 border-b border-[var(--tor-border)]">
                 <span className="text-[#9b9b95]">Версия</span>
-                <span className="text-[#f2f0ec] font-medium">0.0.3</span>
+                <span className="text-[#f2f0ec] font-medium">0.0.4</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-[var(--tor-border)]">
                 <span className="text-[#9b9b95]">Разработчик</span>
@@ -336,6 +378,8 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
             </button>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   )

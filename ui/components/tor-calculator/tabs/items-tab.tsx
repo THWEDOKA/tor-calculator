@@ -14,6 +14,7 @@ import {
   List,
 } from "lucide-react"
 import { callDesktop, isDesktop } from "@/lib/desktop-api"
+import { playActionSound } from "@/lib/sound-settings"
 import { notifyTransactionsChanged } from "@/lib/tor-events"
 import {
   Dialog,
@@ -256,7 +257,10 @@ export function ItemsTab() {
         setItems((prev) => [row, ...prev])
         resetAddForm()
         setAddOpen(false)
-        if (writeToCalculator) notifyTransactionsChanged()
+        if (writeToCalculator) {
+          notifyTransactionsChanged()
+          void playActionSound("add")
+        }
         return
       }
       setAddError(true)
@@ -292,7 +296,10 @@ export function ItemsTab() {
     })
     resetAddForm()
     setAddOpen(false)
-    if (writeToCalculator) notifyTransactionsChanged()
+    if (writeToCalculator) {
+      notifyTransactionsChanged()
+      void playActionSound("add")
+    }
   }
 
   const handleDelete = async (item: InventoryItem) => {
@@ -316,7 +323,10 @@ export function ItemsTab() {
     })
     if (editingItemId === item.id) cancelEditing()
     setDeleteItem(null)
-    if (hasPurchaseTx) notifyTransactionsChanged()
+    if (hasPurchaseTx) {
+      notifyTransactionsChanged()
+      void playActionSound("delete")
+    }
   }
 
   const startEditing = (item: InventoryItem) => {
@@ -435,7 +445,10 @@ export function ItemsTab() {
       purchasePrice: sellItem.purchasePrice,
       savedToCalculator: writeToCalculator,
     })
-    if (writeToCalculator) notifyTransactionsChanged()
+    if (writeToCalculator) {
+      notifyTransactionsChanged()
+      void playActionSound("add")
+    }
     window.setTimeout(() => setSellOverlay(null), 3200)
   }
 

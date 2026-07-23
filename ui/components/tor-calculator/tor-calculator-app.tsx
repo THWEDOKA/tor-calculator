@@ -1,14 +1,23 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { MainWindow } from "./main-window"
 import { WindowTitlebar } from "./window-titlebar"
 import { WebTopbar } from "./web-topbar"
-import { isDesktop, onDesktopReady } from "@/lib/desktop-api"
+import { StartupSplash, WhatsNewDialog } from "./startup-experience"
+import { callDesktop, isDesktop, onDesktopReady } from "@/lib/desktop-api"
 import { applySavedThemeColors, applySavedThemeColorsAsync } from "@/lib/accent-color"
+
+const CURRENT_VERSION = "0.0.4"
+const WHATS_NEW_KEY = `tor-whats-new-seen-${CURRENT_VERSION}`
 
 export function TorCalculatorApp() {
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [startupProgress, setStartupProgress] = useState(0)
+  const [showStartup, setShowStartup] = useState(true)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
+  const [acceptingWhatsNew, setAcceptingWhatsNew] = useState(false)
+  const startupBeganAt = useRef<number | null>(null)
   const [mode, setMode] = useState<"detecting" | "desktop" | "web">(() => {
     if (typeof window === "undefined") return "detecting"
     try {
@@ -39,10 +48,74 @@ export function TorCalculatorApp() {
   }, [])
 
   useEffect(() => {
+    if (startupBeganAt.current === null) startupBeganAt.current = performance.now()
+    const timer = window.setInterval(() => {
+      const elapsed = performance.now() - (startupBeganAt.current ?? performance.now())
+      setStartupProgress((current) => {
+        if (mode === "detecting") {
+          return Math.min(88, Math.max(current + 1, Math.floor(elapsed / 15)))
+        }
+        if (elapsed < 1200) return Math.min(96, current + 3)
+        return Math.min(100, current + 4)
+      })
+    }, 48)
+    return () => window.clearInterval(timer)
+  }, [mode])
+
+  useEffect(() => {
+    if (startupProgress !== 100) return
+    const timer = window.setTimeout(() => setShowStartup(false), 240)
+    return () => window.clearTimeout(timer)
+  }, [startupProgress])
+
+  useEffect(() => {
     if (mode !== "desktop") return
     document.body.classList.add("tor-desktop")
     return () => document.body.classList.remove("tor-desktop")
   }, [mode])
+
+  useEffect(() => {
+    if (showStartup || mode === "detecting") return
+    let cancelled = false
+
+    const check = async () => {
+      if (localStorage.getItem(WHATS_NEW_KEY) === "1") return
+      if (mode === "desktop") {
+        try {
+          const result = await callDesktop<{ ok: boolean; value?: string | null }>(
+            "setting_get",
+            WHATS_NEW_KEY
+          )
+          if (result.ok && result.value === "1") {
+            localStorage.setItem(WHATS_NEW_KEY, "1")
+            return
+          }
+        } catch {
+          // Покажем окно и сохраним локально, если desktop API временно недоступен.
+        }
+      }
+      if (!cancelled) setShowWhatsNew(true)
+    }
+
+    void check()
+    return () => {
+      cancelled = true
+    }
+  }, [mode, showStartup])
+
+  const acceptWhatsNew = async () => {
+    setAcceptingWhatsNew(true)
+    localStorage.setItem(WHATS_NEW_KEY, "1")
+    if (mode === "desktop") {
+      try {
+        await callDesktop("setting_set", WHATS_NEW_KEY, "1")
+      } catch {
+        // localStorage остаётся резервным постоянным маркером.
+      }
+    }
+    setShowWhatsNew(false)
+    setAcceptingWhatsNew(false)
+  }
 
   return (
     <div className="h-screen w-screen bg-[var(--tor-bg-dark)]">
@@ -61,6 +134,12 @@ export function TorCalculatorApp() {
           )}
         </div>
       </div>
+      {showStartup && <StartupSplash progress={startupProgress} />}
+      <WhatsNewDialog
+        open={showWhatsNew}
+        accepting={acceptingWhatsNew}
+        onAccept={() => void acceptWhatsNew()}
+      />
     </div>
   )
 }

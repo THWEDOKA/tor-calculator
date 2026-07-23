@@ -8,6 +8,8 @@ $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $UiDir = Join-Path $RepoRoot "ui"
 $OutputDir = Join-Path $RepoRoot "release"
 $IconPath = Join-Path $RepoRoot "icon.png"
+$AddSoundsDir = Join-Path $RepoRoot "sounds\transaction-add"
+$DeleteSoundsDir = Join-Path $RepoRoot "sounds\transaction-delete"
 $OneFile = -not $Standalone
 
 function Invoke-CheckedCommand {
@@ -44,6 +46,12 @@ if (-not (Test-Path $IconPath)) {
     throw "Icon file not found: $IconPath"
 }
 
+foreach ($SoundDir in @($AddSoundsDir, $DeleteSoundsDir)) {
+    if (-not (Test-Path $SoundDir)) {
+        throw "Sound directory not found: $SoundDir"
+    }
+}
+
 $Py = Resolve-PythonCommand
 Write-Host "==> Python command: $($Py.File) $($Py.Prefix -join ' ')"
 
@@ -70,6 +78,8 @@ $nuitkaArgs = $Py.Prefix + @(
     "--output-dir=$OutputDir",
     "--output-filename=TorCalculator.exe",
     "--include-data-dir=$UiDir=ui",
+    "--include-data-dir=$AddSoundsDir=sounds/transaction-add",
+    "--include-data-dir=$DeleteSoundsDir=sounds/transaction-delete",
     (Join-Path $RepoRoot "app.py")
 )
 

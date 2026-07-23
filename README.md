@@ -1,6 +1,6 @@
 # TorCalculator
 
-**Версия:** `0.0.3`
+**Версия:** `0.0.4`
 
 Локальное desktop-приложение для учёта сделок, имущества и финансовой цели.
 Сделано для ETTORE-комьюнити.
@@ -89,6 +89,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-exe.ps1 -Standalone
 
 - `release/TorCalculator.exe`
 - `release/` для standalone-сборки
+- `sounds/transaction-add/` — звуки добавления сделки
+- `sounds/transaction-delete/` — звуки удаления сделки
 
 ## Структура
 

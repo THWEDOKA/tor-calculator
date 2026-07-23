@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Plus, Target, Trash2, TrendingUp, TrendingDown, Wallet } from "lucide-react"
 import { callDesktop, isDesktop } from "@/lib/desktop-api"
 import { addGoalProgressAsync, loadGoal, removeGoalContributionsByTransactionIds } from "@/lib/goal-storage"
+import { playActionSound } from "@/lib/sound-settings"
 import { TOR_TRANSACTIONS_CHANGED } from "@/lib/tor-events"
 import {
   AlertDialog,
@@ -13,7 +14,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
@@ -127,6 +127,7 @@ export function CalculatorTab() {
         setSuccess(true)
         setTimeout(() => setSuccess(false), 600)
         addPositiveToGoal(numAmount, newTransaction.createdAt, newTransaction.id)
+        void playActionSound("add")
         return
       }
       setError(true)
@@ -141,6 +142,7 @@ export function CalculatorTab() {
     setSuccess(true)
     setTimeout(() => setSuccess(false), 600)
     addPositiveToGoal(numAmount, newTransaction.createdAt, newTransaction.id)
+    void playActionSound("add")
   }
 
   const handleDelete = async (id: number) => {
@@ -162,9 +164,10 @@ export function CalculatorTab() {
         // best-effort; UI уже обновился
       }
     }
+    void playActionSound("delete")
   }
 
-  const handleClearTransactions = async () => {
+  const handleClearTransactions = async (removeGoalProgress: boolean) => {
     const positiveTransactionIds = transactions.filter((tx) => tx.amount > 0).map((tx) => tx.id)
     if (isDesktop()) {
       try {
@@ -174,9 +177,12 @@ export function CalculatorTab() {
       }
     }
     localStorage.removeItem("tor-transactions")
-    void removeGoalContributionsByTransactionIds(positiveTransactionIds)
+    if (removeGoalProgress) {
+      await removeGoalContributionsByTransactionIds(positiveTransactionIds)
+    }
     setTransactions([])
     setClearOpen(false)
+    void playActionSound("delete")
   }
 
   const totalBalance = transactions.reduce((sum, t) => sum + t.amount, 0)
@@ -376,24 +382,44 @@ export function CalculatorTab() {
       </div>
 
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
-        <AlertDialogContent className="bg-[var(--tor-bg-card)] border-[var(--tor-border)] text-[#f2f0ec]">
+        <AlertDialogContent className="bg-[var(--tor-bg-card)] border-[var(--tor-border)] text-[#f2f0ec] sm:max-w-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Очистить сделки?</AlertDialogTitle>
             <AlertDialogDescription className="text-[#9b9b95]">
-              История сделок будет удалена. Имущество и цель останутся на месте.
+              Выберите, что сделать с прогрессом цели. История сделок будет удалена в обоих случаях.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <div className="grid gap-3 py-1 sm:grid-cols-2">
+            <div className="rounded-lg border border-[var(--tor-accent)]/35 bg-[var(--tor-accent-bg)] p-4">
+              <div className="text-sm font-semibold text-[#f2f0ec]">С целью</div>
+              <p className="mt-1 text-xs leading-5 text-[#9b9b95]">
+                Удалит сделки и вычтет из цели весь прогресс, который был занесён из этих сделок.
+              </p>
+            </div>
+            <div className="rounded-lg border border-[var(--tor-border)] bg-[var(--tor-bg-input)] p-4">
+              <div className="text-sm font-semibold text-[#f2f0ec]">Без цели</div>
+              <p className="mt-1 text-xs leading-5 text-[#9b9b95]">
+                Удалит только сделки. Текущая сумма и история пополнений цели останутся без изменений.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
             <AlertDialogCancel className="bg-[var(--tor-bg-control)] border-[var(--tor-border-strong)] text-[#f2f0ec] hover:bg-[var(--tor-bg-control-hover)]">
               Отмена
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleClearTransactions}
+              onClick={() => void handleClearTransactions(false)}
+              className="bg-[var(--tor-bg-control)] text-[#f2f0ec] hover:bg-[var(--tor-bg-control-hover)]"
+            >
+              Без цели
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => void handleClearTransactions(true)}
               className="bg-[#c84b55] text-white hover:bg-[#b9434d]"
             >
-              Очистить
+              С целью
             </AlertDialogAction>
-          </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>
