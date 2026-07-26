@@ -30,6 +30,24 @@ interface SettingsTabProps {
   onClearData: () => void
 }
 
+type WebTransaction = {
+  amount: number
+  comment: string
+  createdAt: string
+}
+
+function loadWebTransactions(): WebTransaction[] {
+  const saved = localStorage.getItem("tor-transactions")
+  if (!saved) return []
+  try {
+    const parsed = JSON.parse(saved)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    localStorage.removeItem("tor-transactions")
+    return []
+  }
+}
+
 export function SettingsTab({ onClearData }: SettingsTabProps) {
   const [showClearModal, setShowClearModal] = useState(false)
   const [section, setSection] = useState<"general" | "sounds">("general")
@@ -62,12 +80,10 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
         }
       }
 
-    const saved = localStorage.getItem("tor-transactions")
-    if (!saved) return
-
-    const transactions = JSON.parse(saved)
+    const transactions = loadWebTransactions()
+    if (transactions.length === 0) return
     const headers = ["Сумма", "Комментарий", "Дата"]
-    const rows = transactions.map((t: { amount: number; comment: string; createdAt: string }) => [
+    const rows = transactions.map((t) => [
       t.amount,
       t.comment,
       new Date(t.createdAt).toLocaleString("ru-RU"),
@@ -312,7 +328,7 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
               </div>
               <div className="flex justify-between items-center py-3 border-b border-[var(--tor-border)]">
                 <span className="text-[#9b9b95]">Версия</span>
-                <span className="text-[#f2f0ec] font-medium">0.0.4</span>
+                <span className="text-[#f2f0ec] font-medium">0.0.5</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-[var(--tor-border)]">
                 <span className="text-[#9b9b95]">Разработчик</span>
@@ -320,12 +336,12 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
               </div>
 
               <a
-                href="https://triazov.ru"
+                href="https://t.me/triazovkirill"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full py-3 bg-[var(--tor-accent)] text-white font-semibold rounded-lg transition-colors duration-200 hover:bg-[var(--tor-accent-hover)] mt-4"
               >
-                Сайт разработчика
+                Телеграм разработчика
                 <ExternalLink className="w-4 h-4" />
               </a>
             </div>

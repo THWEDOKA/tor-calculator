@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { LoaderCircle, Play, RotateCw, Volume2 } from "lucide-react"
+import { LoaderCircle, Play, RotateCw, Volume2, VolumeX } from "lucide-react"
+import { Slider } from "@/components/ui/slider"
 import {
   Select,
   SelectContent,
@@ -12,9 +13,11 @@ import {
 import {
   SOUND_NONE_VALUE,
   getSoundSelection,
+  loadSoundVolume,
   listSoundFiles,
   loadSoundSelection,
   playSoundFile,
+  saveSoundVolume,
   saveSoundSelection,
   type SoundAction,
   type SoundFile,
@@ -53,14 +56,16 @@ export function SoundSettings() {
   })
   const [loading, setLoading] = useState(true)
   const [playing, setPlaying] = useState<SoundAction | null>(null)
+  const [volume, setVolume] = useState(72)
 
   const refresh = async () => {
     setLoading(true)
-    const [addFiles, deleteFiles, addSelection, deleteSelection] = await Promise.all([
+    const [addFiles, deleteFiles, addSelection, deleteSelection, savedVolume] = await Promise.all([
       listSoundFiles("add"),
       listSoundFiles("delete"),
       loadSoundSelection("add"),
       loadSoundSelection("delete"),
+      loadSoundVolume(),
     ])
     setFiles({ add: addFiles, delete: deleteFiles })
     const validAddSelection = addFiles.some((file) => file.name === addSelection)
@@ -75,6 +80,7 @@ export function SoundSettings() {
     })
     if (validAddSelection !== addSelection) void saveSoundSelection("add", SOUND_NONE_VALUE)
     if (validDeleteSelection !== deleteSelection) void saveSoundSelection("delete", SOUND_NONE_VALUE)
+    setVolume(Math.round(savedVolume * 100))
     setLoading(false)
   }
 
@@ -99,6 +105,16 @@ export function SoundSettings() {
     window.setTimeout(() => setPlaying((current) => current === action ? null : current), 450)
   }
 
+  const changeVolume = (values: number[]) => {
+    setVolume(values[0] ?? 0)
+  }
+
+  const commitVolume = (values: number[]) => {
+    const nextVolume = values[0] ?? 0
+    setVolume(nextVolume)
+    void saveSoundVolume(nextVolume / 100)
+  }
+
   return (
     <section className="rounded-lg border border-[var(--tor-border-soft)] bg-[var(--tor-bg-card)] p-6">
       <div className="mb-5 flex items-start justify-between gap-4">
@@ -120,6 +136,40 @@ export function SoundSettings() {
           <RotateCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Обновить список
         </button>
+      </div>
+
+      <div className="mb-4 rounded-lg border border-[var(--tor-border-soft)] bg-[var(--tor-bg-input)] p-4">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--tor-bg-soft)]">
+              {volume === 0
+                ? <VolumeX className="h-4 w-4 text-[#9b9b95]" />
+                : <Volume2 className="h-4 w-4 text-[var(--tor-accent-strong)]" />}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[#f2f0ec]">Общая громкость</h3>
+              <p className="mt-0.5 text-xs text-[#9b9b95]">Для всех звуков сделок и предпрослушивания</p>
+            </div>
+          </div>
+          <output
+            htmlFor="sound-volume"
+            className="min-w-12 text-right text-sm font-semibold tabular-nums text-[#f2f0ec]"
+          >
+            {volume}%
+          </output>
+        </div>
+        <Slider
+          id="sound-volume"
+          min={0}
+          max={100}
+          step={1}
+          value={[volume]}
+          onValueChange={changeVolume}
+          onValueCommit={commitVolume}
+          aria-label="Громкость звуков"
+          aria-valuetext={`${volume} процентов`}
+          className="h-10 [&_[data-slot=slider-track]]:bg-[var(--tor-bg-control)] [&_[data-slot=slider-range]]:bg-[var(--tor-accent)] [&_[data-slot=slider-thumb]]:size-5"
+        />
       </div>
 
       <div className="space-y-3">

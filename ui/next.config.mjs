@@ -18,9 +18,6 @@ const nextConfig = {
   },
   // pywebview может грузить страницу как 127.0.0.1, а dev-сервер стартует на localhost → разрешаем оба.
   allowedDevOrigins: ["localhost", "127.0.0.1"],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     unoptimized: true,
   },

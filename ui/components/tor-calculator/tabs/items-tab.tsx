@@ -13,12 +13,13 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react"
-import { callDesktop, isDesktop } from "@/lib/desktop-api"
+import { callDesktop, isDesktop, onDesktopReady } from "@/lib/desktop-api"
 import { playActionSound } from "@/lib/sound-settings"
 import { notifyTransactionsChanged } from "@/lib/tor-events"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -26,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ImageFilePicker } from "@/components/tor-calculator/image-file-picker"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +42,7 @@ import {
 const LS_ITEMS = "tor-items"
 const LS_ITEMS_VIEW = "tor-items-view"
 const LS_ITEMS_CALC_MODE = "tor-items-calc-mode"
+const SETTING_ITEMS_CALC_MODE = "items:calculator-mode"
 
 export interface InventoryItem {
   id: number
@@ -48,6 +51,29 @@ export interface InventoryItem {
   imageDataUrl: string
   purchasedAt: string
   purchaseTxId: number
+}
+
+type WebTransaction = {
+  id: number
+  amount: number
+  comment: string
+  createdAt: string
+}
+
+function loadWebTransactions(): WebTransaction[] {
+  const saved = localStorage.getItem("tor-transactions")
+  if (!saved) return []
+  try {
+    const parsed = JSON.parse(saved)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    localStorage.removeItem("tor-transactions")
+    return []
+  }
+}
+
+function persistWebTransactions(transactions: WebTransaction[]) {
+  localStorage.setItem("tor-transactions", JSON.stringify(transactions))
 }
 
 function formatMoney(n: number) {
@@ -143,6 +169,10 @@ export function ItemsTab() {
 
   useEffect(() => {
     void refresh()
+    const offDesktopReady = onDesktopReady(() => {
+      void refresh()
+    })
+    return offDesktopReady
   }, [refresh])
 
   useEffect(() => {
@@ -153,23 +183,33 @@ export function ItemsTab() {
     }
   }, [])
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    localStorage.setItem(LS_ITEMS_VIEW, viewMode)
-  }, [viewMode])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const stored = localStorage.getItem(LS_ITEMS_CALC_MODE)
-    if (stored === "with" || stored === "without") {
-      setCalcMode(stored)
+  const loadCalcMode = useCallback(async () => {
+    let stored = localStorage.getItem(LS_ITEMS_CALC_MODE)
+    if (isDesktop()) {
+      try {
+        const result = await callDesktop<{ ok: boolean; value?: string | null }>(
+          "setting_get",
+          SETTING_ITEMS_CALC_MODE
+        )
+        if (result.ok && (result.value === "with" || result.value === "without")) {
+          stored = result.value
+          localStorage.setItem(LS_ITEMS_CALC_MODE, result.value)
+        } else if (stored === "with" || stored === "without") {
+          await callDesktop("setting_set", SETTING_ITEMS_CALC_MODE, stored)
+        }
+      } catch {
+        // Локальный выбор остаётся резервом до готовности desktop API.
+      }
     }
+    if (stored === "with" || stored === "without") setCalcMode(stored)
   }, [])
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-    localStorage.setItem(LS_ITEMS_CALC_MODE, calcMode)
-  }, [calcMode])
+    void loadCalcMode()
+    return onDesktopReady(() => {
+      void loadCalcMode()
+    })
+  }, [loadCalcMode])
 
   useEffect(() => {
     if (!addOpen) return
@@ -225,6 +265,19 @@ export function ItemsTab() {
     setAddError(false)
   }
 
+  const chooseCalcMode = (mode: CalcMode) => {
+    setCalcMode(mode)
+    localStorage.setItem(LS_ITEMS_CALC_MODE, mode)
+    if (isDesktop()) {
+      void callDesktop("setting_set", SETTING_ITEMS_CALC_MODE, mode).catch(() => {})
+    }
+  }
+
+  const chooseViewMode = (mode: ViewMode) => {
+    setViewMode(mode)
+    localStorage.setItem(LS_ITEMS_VIEW, mode)
+  }
+
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
     const price = parseFloat(newPrice.replace(",", "."))
@@ -268,10 +321,11 @@ export function ItemsTab() {
       return
     }
 
-    const purchaseTxId = writeToCalculator ? Date.now() : 0
+    const itemId = Date.now()
+    const purchaseTxId = writeToCalculator ? itemId : 0
     const purchasedAt = new Date().toISOString()
     const row: InventoryItem = {
-      id: purchaseTxId,
+      id: itemId,
       name,
       purchasePrice: price,
       imageDataUrl: newImage,
@@ -285,9 +339,7 @@ export function ItemsTab() {
         comment: `Покупка предмета: ${name}`,
         createdAt: purchasedAt,
       }
-      const saved = localStorage.getItem("tor-transactions")
-      const list = saved ? JSON.parse(saved) : []
-      localStorage.setItem("tor-transactions", JSON.stringify([tx, ...list]))
+      persistWebTransactions([tx, ...loadWebTransactions()])
     }
     setItems((prev) => {
       const next = [row, ...prev]
@@ -308,12 +360,8 @@ export function ItemsTab() {
       await callDesktop("item_delete", item.id, hasPurchaseTx)
     } else {
       if (hasPurchaseTx) {
-        const saved = localStorage.getItem("tor-transactions")
-        if (saved) {
-          const list = JSON.parse(saved) as { id: number }[]
-          const nextTx = list.filter((t) => t.id !== item.purchaseTxId)
-          localStorage.setItem("tor-transactions", JSON.stringify(nextTx))
-        }
+        const nextTx = loadWebTransactions().filter((transaction) => transaction.id !== item.purchaseTxId)
+        persistWebTransactions(nextTx)
       }
     }
     setItems((prev) => {
@@ -377,16 +425,12 @@ export function ItemsTab() {
         purchaseTxId: Number(it.purchaseTxId),
       }
     } else if (item.purchaseTxId > 0) {
-      const saved = localStorage.getItem("tor-transactions")
-      if (saved) {
-        const list = JSON.parse(saved) as { id: number; amount: number; comment: string }[]
-        const nextTx = list.map((tx) =>
-          tx.id === item.purchaseTxId
-            ? { ...tx, amount: -Math.abs(price), comment: `Покупка предмета: ${name}` }
-            : tx
-        )
-        localStorage.setItem("tor-transactions", JSON.stringify(nextTx))
-      }
+      const nextTx = loadWebTransactions().map((transaction) =>
+        transaction.id === item.purchaseTxId
+          ? { ...transaction, amount: -Math.abs(price), comment: `Покупка предмета: ${name}` }
+          : transaction
+      )
+      persistWebTransactions(nextTx)
     }
 
     setItems((prev) => {
@@ -426,9 +470,7 @@ export function ItemsTab() {
           comment: `Продажа предмета: ${name}`,
           createdAt: new Date().toISOString(),
         }
-        const saved = localStorage.getItem("tor-transactions")
-        const list = saved ? JSON.parse(saved) : []
-        localStorage.setItem("tor-transactions", JSON.stringify([tx, ...list]))
+        persistWebTransactions([tx, ...loadWebTransactions()])
       }
     }
 
@@ -462,7 +504,7 @@ export function ItemsTab() {
           <div className="flex items-center rounded-lg border border-[var(--tor-border)] bg-[var(--tor-bg-card)] p-1">
             <button
               type="button"
-              onClick={() => setCalcMode("with")}
+              onClick={() => chooseCalcMode("with")}
               className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm transition-colors ${
                 calcMode === "with"
                   ? "bg-[#7fb89b]/20 text-[#f2f0ec]"
@@ -474,7 +516,7 @@ export function ItemsTab() {
             </button>
             <button
               type="button"
-              onClick={() => setCalcMode("without")}
+              onClick={() => chooseCalcMode("without")}
               className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm transition-colors ${
                 calcMode === "without"
                   ? "bg-[#c84b55]/20 text-[#f2f0ec]"
@@ -489,7 +531,7 @@ export function ItemsTab() {
           <div className="flex items-center rounded-lg border border-[var(--tor-border)] bg-[var(--tor-bg-card)] p-1">
             <button
               type="button"
-              onClick={() => setViewMode("cards")}
+              onClick={() => chooseViewMode("cards")}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
                 viewMode === "cards"
                   ? "bg-[#c84b55]/20 text-[#f2f0ec]"
@@ -502,7 +544,7 @@ export function ItemsTab() {
             </button>
             <button
               type="button"
-              onClick={() => setViewMode("list")}
+              onClick={() => chooseViewMode("list")}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
                 viewMode === "list"
                   ? "bg-[#c84b55]/20 text-[#f2f0ec]"
@@ -534,7 +576,7 @@ export function ItemsTab() {
           <Package className="w-14 h-14 mb-4 opacity-40 text-[#c84b55]" />
           <p className="text-lg text-[#f2f0ec] font-medium">Пока нет имущества</p>
           <p className="text-sm mt-2 text-center max-w-sm">
-            Добавьте имущество с ценой покупки и при желании вставьте фото из буфера (Ctrl+V) в форме добавления.
+            Добавьте имущество с ценой покупки, затем выберите фото с диска или вставьте его из буфера.
           </p>
         </div>
       ) : (
@@ -568,6 +610,8 @@ export function ItemsTab() {
                         <img
                           src={item.imageDataUrl}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -677,7 +721,13 @@ export function ItemsTab() {
                     <div className="h-16 w-16 rounded-lg overflow-hidden bg-[var(--tor-bg-input)] shrink-0">
                       {item.imageDataUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.imageDataUrl} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={item.imageDataUrl}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-[#525252]">
                           <ImageIcon className="w-6 h-6 opacity-60" />
@@ -768,6 +818,9 @@ export function ItemsTab() {
         <DialogContent className="bg-[var(--tor-bg-card)] border-[var(--tor-border)] text-[#f2f0ec] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Новое имущество</DialogTitle>
+            <DialogDescription className="text-[#9b9b95]">
+              Укажите данные и выберите изображение с диска или вставьте его через Ctrl+V.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddItem} className="space-y-4">
             <div>
@@ -795,7 +848,7 @@ export function ItemsTab() {
               />
             </div>
             <div>
-              <Label className="text-[#9b9b95]">Фото (Ctrl+V)</Label>
+              <Label className="text-[#9b9b95]">Фото</Label>
               <div
                 ref={pasteRef}
                 tabIndex={0}
@@ -811,22 +864,25 @@ export function ItemsTab() {
                   <>
                     <ClipboardPaste className="w-8 h-8 text-[#767a80]" />
                     <span className="text-sm text-[#767a80] text-center">
-                      Кликните сюда и вставьте картинку из буфера
+                      Вставьте картинку из буфера через Ctrl+V
                     </span>
                   </>
                 )}
               </div>
-              {newImage && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 text-[#9b9b95]"
-                  onClick={() => setNewImage("")}
-                >
-                  Убрать фото
-                </Button>
-              )}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <ImageFilePicker onImageSelected={setNewImage} />
+                {newImage && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-10 text-[#9b9b95]"
+                    onClick={() => setNewImage("")}
+                  >
+                    Убрать фото
+                  </Button>
+                )}
+              </div>
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button type="button" variant="secondary" onClick={() => setAddOpen(false)} className="bg-[var(--tor-bg-control)] text-[#f2f0ec]">

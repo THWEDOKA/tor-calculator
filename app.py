@@ -27,7 +27,7 @@ UI_DIR = PROJECT_ROOT / "ui"
 LOG_FILE = PROJECT_ROOT / "debug.log"
 APP_NAME = "TorCalculator"
 APP_WINDOW_TITLE = "TorCalculator - /promo ETTORE"
-APP_VERSION = "0.0.4"
+APP_VERSION = "0.0.5"
 SOUNDS_DIR = PROJECT_ROOT / "sounds"
 SOUND_ACTION_DIRS = {
     "add": SOUNDS_DIR / "transaction-add",
@@ -130,9 +130,21 @@ def start_static_ui_server(root_dir: Path, logger: logging.Logger) -> tuple[Thre
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(root_dir), **kwargs)
 
+        def end_headers(self) -> None:
+            request_path = self.path.split("?", 1)[0]
+            if request_path.startswith("/_next/static/"):
+                self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+            elif request_path in {"/", "/index.html"}:
+                self.send_header("Cache-Control", "no-cache")
+            else:
+                self.send_header("Cache-Control", "public, max-age=3600")
+            super().end_headers()
+
         def log_message(self, fmt: str, *args) -> None:
             try:
-                logger.info("[static] " + fmt, *args)
+                status = int(args[1]) if len(args) > 1 else 0
+                log = logger.warning if status >= 400 else logger.debug
+                log("[static] " + fmt, *args)
             except Exception:
                 pass
 
@@ -351,6 +363,10 @@ def _utc_iso_now() -> str:
 
 
 def init_db(conn: sqlite3.Connection, logger: logging.Logger) -> None:
+    conn.execute("PRAGMA busy_timeout = 5000")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA synchronous = NORMAL")
+    conn.execute("PRAGMA temp_store = MEMORY")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS transactions (
@@ -392,7 +408,7 @@ class DesktopApi:
         self._data_dir = data_dir
         self._db_path = db_path
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        self._conn = sqlite3.connect(str(db_path), timeout=5.0, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         init_db(self._conn, logger=logger)
 
@@ -1060,6 +1076,8 @@ def main() -> int:
             easy_drag=False,
             resizable=True,
             shadow=True,
+            focus=True,
+            on_top=True,
             transparent=False,
             background_color="#0e0e0e",
         )
@@ -1067,6 +1085,25 @@ def main() -> int:
 
         def on_loaded() -> None:
             inject_hotkeys(window, logger)
+            try:
+                window.focus()
+            except Exception:
+                logger.debug("Could not focus window on startup", exc_info=True)
+
+            def release_startup_topmost() -> None:
+                time.sleep(2.0)
+                try:
+                    window.on_top = False
+                    logger.debug("Startup topmost mode released")
+                except Exception:
+                    logger.debug("Could not release startup topmost mode", exc_info=True)
+
+            threading.Thread(
+                target=release_startup_topmost,
+                name="release-startup-topmost",
+                daemon=True,
+            ).start()
+
             if open_devtools_on_start:
                 try:
                     window.show_devtools()

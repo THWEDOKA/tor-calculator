@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ImageFilePicker } from "@/components/tor-calculator/image-file-picker"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { loadGoalAsync, saveGoalAsync, type StoredGoal } from "@/lib/goal-storage"
 import {
@@ -428,6 +429,21 @@ export function GoalTab() {
               </div>
             </div>
 
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <ImageFilePicker onImageSelected={setImageDataUrl} />
+              {imageDataUrl && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-10 text-[#9b9b95]"
+                  onClick={() => setImageDataUrl("")}
+                >
+                  Убрать картинку
+                </Button>
+              )}
+            </div>
+
             <div className="mt-4 flex items-center gap-2 text-sm text-[#767a80]">
               <CalendarDays className="h-4 w-4" />
               {deadline ? daysLeft(deadline) : "Срок можно оставить пустым"}
@@ -752,23 +768,39 @@ export function GoalTab() {
               </div>
             </div>
 
-            <div
-              tabIndex={0}
-              onPaste={handleEditPasteImage}
-              className="relative min-h-[230px] overflow-hidden rounded-lg border border-dashed border-[var(--tor-border-strong)] bg-[var(--tor-bg-input)] outline-none focus:border-[var(--tor-accent)]"
-            >
-              {editImageDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={editImageDataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-center text-[#767a80]">
-                  <div>
-                    <ClipboardPaste className="mx-auto mb-3 h-8 w-8" />
-                    <div className="text-sm">Вставьте картинку</div>
-                    <div className="mt-1 text-xs">Ctrl+V</div>
+            <div>
+              <div
+                tabIndex={0}
+                onPaste={handleEditPasteImage}
+                className="relative min-h-[230px] overflow-hidden rounded-lg border border-dashed border-[var(--tor-border-strong)] bg-[var(--tor-bg-input)] outline-none focus:border-[var(--tor-accent)]"
+              >
+                {editImageDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={editImageDataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-center text-[#767a80]">
+                    <div>
+                      <ClipboardPaste className="mx-auto mb-3 h-8 w-8" />
+                      <div className="text-sm">Вставьте картинку</div>
+                      <div className="mt-1 text-xs">Ctrl+V</div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <ImageFilePicker onImageSelected={setEditImageDataUrl} />
+                {editImageDataUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-10 text-[#9b9b95]"
+                    onClick={() => setEditImageDataUrl("")}
+                  >
+                    Убрать картинку
+                  </Button>
+                )}
+              </div>
             </div>
 
             <DialogFooter className="md:col-span-2">

@@ -1,13 +1,32 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import dynamic from "next/dynamic"
 import { Sidebar } from "./sidebar"
 import { CalculatorTab } from "./tabs/calculator-tab"
-import { GoalTab } from "./tabs/goal-tab"
-import { ItemsTab } from "./tabs/items-tab"
-import { SettingsTab } from "./tabs/settings-tab"
 
 type TabType = "calculator" | "goal" | "items" | "settings"
+
+function TabLoading() {
+  return (
+    <div className="flex min-h-52 items-center justify-center" role="status" aria-label="Загрузка раздела">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--tor-border)] border-t-[var(--tor-accent)]" />
+    </div>
+  )
+}
+
+const GoalTab = dynamic(
+  () => import("./tabs/goal-tab").then((module) => module.GoalTab),
+  { loading: TabLoading }
+)
+const ItemsTab = dynamic(
+  () => import("./tabs/items-tab").then((module) => module.ItemsTab),
+  { loading: TabLoading }
+)
+const SettingsTab = dynamic(
+  () => import("./tabs/settings-tab").then((module) => module.SettingsTab),
+  { loading: TabLoading }
+)
 
 export function MainWindow() {
   const [activeTab, setActiveTab] = useState<TabType>("calculator")

@@ -9,10 +9,19 @@ export type SoundFile = {
 }
 
 const NO_SOUND = "__none__"
+const DEFAULT_VOLUME = 0.72
+const LS_SOUND_VOLUME = "tor-sound-volume"
+const DESKTOP_SOUND_VOLUME = "sound:volume"
 const soundDataCache = new Map<string, string>()
 const activeAudio = new Map<SoundAction, HTMLAudioElement>()
 
 export const SOUND_NONE_VALUE = NO_SOUND
+export const DEFAULT_SOUND_VOLUME = DEFAULT_VOLUME
+
+function normalizeVolume(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_VOLUME
+  return Math.min(1, Math.max(0, value))
+}
 
 function localKey(action: SoundAction) {
   return `tor-sound-${action}`
@@ -25,6 +34,45 @@ function desktopKey(action: SoundAction) {
 export function getSoundSelection(action: SoundAction): string {
   if (typeof window === "undefined") return NO_SOUND
   return localStorage.getItem(localKey(action)) || NO_SOUND
+}
+
+export function getSoundVolume(): number {
+  if (typeof window === "undefined") return DEFAULT_VOLUME
+  const raw = localStorage.getItem(LS_SOUND_VOLUME)
+  if (raw === null) return DEFAULT_VOLUME
+  const saved = Number(raw)
+  return normalizeVolume(saved)
+}
+
+export async function loadSoundVolume(): Promise<number> {
+  const local = getSoundVolume()
+  if (!isDesktop()) return local
+  try {
+    const result = await callDesktop<{ ok: boolean; value?: string | null }>(
+      "setting_get",
+      DESKTOP_SOUND_VOLUME
+    )
+    if (result.ok && result.value !== null && result.value !== undefined) {
+      const desktopVolume = normalizeVolume(Number(result.value))
+      localStorage.setItem(LS_SOUND_VOLUME, String(desktopVolume))
+      return desktopVolume
+    }
+    await callDesktop("setting_set", DESKTOP_SOUND_VOLUME, String(local))
+  } catch {
+    // Локальная настройка остаётся рабочим резервом.
+  }
+  return local
+}
+
+export async function saveSoundVolume(volume: number): Promise<void> {
+  const normalized = normalizeVolume(volume)
+  localStorage.setItem(LS_SOUND_VOLUME, String(normalized))
+  if (!isDesktop()) return
+  try {
+    await callDesktop("setting_set", DESKTOP_SOUND_VOLUME, String(normalized))
+  } catch {
+    // Локальная копия уже сохранена.
+  }
 }
 
 export async function loadSoundSelection(action: SoundAction): Promise<string> {
@@ -102,7 +150,7 @@ export async function playSoundFile(action: SoundAction, filename: string): Prom
   }
 
   const audio = new Audio(dataUrl)
-  audio.volume = 0.72
+  audio.volume = getSoundVolume()
   activeAudio.set(action, audio)
   audio.addEventListener("ended", () => {
     if (activeAudio.get(action) === audio) activeAudio.delete(action)

@@ -2,10 +2,11 @@
 
 import React from "react"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Plus, Target, Trash2, TrendingUp, TrendingDown, Wallet } from "lucide-react"
-import { callDesktop, isDesktop } from "@/lib/desktop-api"
+import { callDesktop, isDesktop, onDesktopReady } from "@/lib/desktop-api"
 import { addGoalProgressAsync, loadGoal, removeGoalContributionsByTransactionIds } from "@/lib/goal-storage"
+import { formatMoneyInput, parseMoneyInput } from "@/lib/money-input"
 import { playActionSound } from "@/lib/sound-settings"
 import { TOR_TRANSACTIONS_CHANGED } from "@/lib/tor-events"
 import {
@@ -19,6 +20,8 @@ import {
 } from "@/components/ui/alert-dialog"
 
 const LS_CALC_GOAL_MODE = "tor-calculator-goal-mode"
+const LS_CALC_DRAFT = "tor-calculator-draft"
+const SETTING_CALC_GOAL_MODE = "calculator:goal-mode"
 
 interface Transaction {
   id: number
@@ -27,8 +30,23 @@ interface Transaction {
   createdAt: Date
 }
 
+function formatTransactionDate(date: Date) {
+  return date.toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+function formatTransactionAmount(amount: number) {
+  return `$${Math.abs(amount).toLocaleString("ru-RU")}`
+}
+
 export function CalculatorTab() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactionsLoaded, setTransactionsLoaded] = useState(false)
   const [amount, setAmount] = useState("")
   const [comment, setComment] = useState("")
   const [error, setError] = useState(false)
@@ -39,36 +57,53 @@ export function CalculatorTab() {
 
   const loadTransactions = useCallback(async () => {
     if (isDesktop()) {
-      const res = await callDesktop<{ ok: boolean; items?: any[] }>("transactions_list")
-      if ((res as any).ok && Array.isArray((res as any).items)) {
-        setTransactions(
-          (res as any).items.map((t: any) => ({
-            id: Number(t.id),
-            amount: Number(t.amount),
-            comment: String(t.comment ?? ""),
-            createdAt: new Date(String(t.createdAt)),
-          }))
-        )
-        return
+      try {
+        const res = await callDesktop<{ ok: boolean; items?: any[] }>("transactions_list")
+        if ((res as any).ok && Array.isArray((res as any).items)) {
+          setTransactions(
+            (res as any).items.map((t: any) => ({
+              id: Number(t.id),
+              amount: Number(t.amount),
+              comment: String(t.comment ?? ""),
+              createdAt: new Date(String(t.createdAt)),
+            }))
+          )
+          setTransactionsLoaded(true)
+          return
+        }
+      } catch {
+        // Desktop bridge ещё может инициализироваться; ниже загрузится локальный резерв.
       }
     }
 
     const saved = localStorage.getItem("tor-transactions")
     if (saved) {
-      const parsed = JSON.parse(saved)
-      setTransactions(
-        parsed.map((t: Transaction & { createdAt: string }) => ({
-          ...t,
-          createdAt: new Date(t.createdAt),
-        }))
-      )
+      try {
+        const parsed = JSON.parse(saved)
+        setTransactions(
+          Array.isArray(parsed)
+            ? parsed.map((t: Transaction & { createdAt: string }) => ({
+                ...t,
+                createdAt: new Date(t.createdAt),
+              }))
+            : []
+        )
+      } catch {
+        localStorage.removeItem("tor-transactions")
+        setTransactions([])
+      }
     } else {
       setTransactions([])
     }
+    setTransactionsLoaded(true)
   }, [])
 
   useEffect(() => {
     void loadTransactions()
+    const offDesktopReady = onDesktopReady(() => {
+      void loadTransactions()
+    })
+    return offDesktopReady
   }, [loadTransactions])
 
   useEffect(() => {
@@ -79,24 +114,85 @@ export function CalculatorTab() {
     return () => window.removeEventListener(TOR_TRANSACTIONS_CHANGED, refresh)
   }, [loadTransactions])
 
-  useEffect(() => {
-    const saved = localStorage.getItem(LS_CALC_GOAL_MODE)
+  const loadGoalMode = useCallback(async () => {
+    let saved = localStorage.getItem(LS_CALC_GOAL_MODE)
+    if (isDesktop()) {
+      try {
+        const result = await callDesktop<{ ok: boolean; value?: string | null }>(
+          "setting_get",
+          SETTING_CALC_GOAL_MODE
+        )
+        if (result.ok && (result.value === "with" || result.value === "without")) {
+          saved = result.value
+          localStorage.setItem(LS_CALC_GOAL_MODE, result.value)
+        } else if (saved === "with" || saved === "without") {
+          await callDesktop("setting_set", SETTING_CALC_GOAL_MODE, saved)
+        }
+      } catch {
+        // Локальный выбор остаётся резервом до готовности desktop API.
+      }
+    }
     if (saved === "with" || saved === "without") setGoalMode(saved)
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(LS_CALC_GOAL_MODE, goalMode)
-  }, [goalMode])
+    void loadGoalMode()
+    return onDesktopReady(() => {
+      void loadGoalMode()
+    })
+  }, [loadGoalMode])
 
   useEffect(() => {
-    if (!isDesktop()) {
+    const saved = localStorage.getItem(LS_CALC_DRAFT)
+    if (!saved) return
+    try {
+      const draft = JSON.parse(saved) as { amount?: string; comment?: string }
+      setAmount(formatMoneyInput(String(draft.amount ?? "")))
+      setComment(String(draft.comment ?? ""))
+    } catch {
+      localStorage.removeItem(LS_CALC_DRAFT)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (transactionsLoaded && !isDesktop()) {
       localStorage.setItem("tor-transactions", JSON.stringify(transactions))
     }
-  }, [transactions])
+  }, [transactions, transactionsLoaded])
+
+  const saveDraft = (nextAmount: string, nextComment: string) => {
+    if (!nextAmount && !nextComment) {
+      localStorage.removeItem(LS_CALC_DRAFT)
+      return
+    }
+    localStorage.setItem(
+      LS_CALC_DRAFT,
+      JSON.stringify({ amount: nextAmount, comment: nextComment })
+    )
+  }
+
+  const updateAmount = (rawValue: string) => {
+    const formatted = formatMoneyInput(rawValue)
+    setAmount(formatted)
+    saveDraft(formatted, comment)
+  }
+
+  const updateComment = (nextComment: string) => {
+    setComment(nextComment)
+    saveDraft(amount, nextComment)
+  }
+
+  const chooseGoalMode = (mode: "with" | "without") => {
+    setGoalMode(mode)
+    localStorage.setItem(LS_CALC_GOAL_MODE, mode)
+    if (isDesktop()) {
+      void callDesktop("setting_set", SETTING_CALC_GOAL_MODE, mode).catch(() => {})
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const numAmount = parseFloat(amount)
+    const numAmount = parseMoneyInput(amount)
 
     if (isNaN(numAmount)) {
       setError(true)
@@ -124,6 +220,7 @@ export function CalculatorTab() {
         setTransactions((prev) => [newTransaction, ...prev])
         setAmount("")
         setComment("")
+        localStorage.removeItem(LS_CALC_DRAFT)
         setSuccess(true)
         setTimeout(() => setSuccess(false), 600)
         addPositiveToGoal(numAmount, newTransaction.createdAt, newTransaction.id)
@@ -139,6 +236,7 @@ export function CalculatorTab() {
     setTransactions((prev) => [newTransaction, ...prev])
     setAmount("")
     setComment("")
+    localStorage.removeItem(LS_CALC_DRAFT)
     setSuccess(true)
     setTimeout(() => setSuccess(false), 600)
     addPositiveToGoal(numAmount, newTransaction.createdAt, newTransaction.id)
@@ -185,23 +283,64 @@ export function CalculatorTab() {
     void playActionSound("delete")
   }
 
-  const totalBalance = transactions.reduce((sum, t) => sum + t.amount, 0)
-  const totalPositive = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
-  const totalNegative = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0)
+  const { totalBalance, totalPositive, totalNegative } = useMemo(
+    () =>
+      transactions.reduce(
+        (totals, transaction) => {
+          totals.totalBalance += transaction.amount
+          if (transaction.amount > 0) totals.totalPositive += transaction.amount
+          if (transaction.amount < 0) totals.totalNegative += transaction.amount
+          return totals
+        },
+        { totalBalance: 0, totalPositive: 0, totalNegative: 0 }
+      ),
+    [transactions]
+  )
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
-
-  const formatAmount = (amount: number) => {
-    return `$${Math.abs(amount).toLocaleString("ru-RU")}`
-  }
+  const transactionRows = useMemo(
+    () =>
+      transactions.map((transaction) => (
+        <div
+          key={transaction.id}
+          className={`group relative rounded-lg p-4 border transition-all duration-200 ${
+            deletingId === transaction.id ? "animate-slide-out-up" : "animate-scale-in"
+          } ${
+            transaction.amount >= 0
+              ? "bg-[#18231f] border-[#7fb89b]/25 hover:border-[#7fb89b]/45"
+              : "bg-[#271b1d] border-[#c84b55]/25 hover:border-[#c84b55]/45"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div
+                className={`text-xl font-bold ${
+                  transaction.amount >= 0 ? "text-[#7fb89b]" : "text-[#d56a72]"
+                }`}
+              >
+                {formatTransactionAmount(transaction.amount)}
+              </div>
+              {transaction.comment && (
+                <p className="text-[#9b9b95] text-sm mt-1 break-words">
+                  {transaction.comment}
+                </p>
+              )}
+              <p className="text-[#767a80] text-xs mt-2">
+                {formatTransactionDate(transaction.createdAt)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleDelete(transaction.id)}
+              className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-[#d56a72] hover:bg-[#c84b55]/12 transition-all"
+              aria-label={`Удалить сделку ${formatTransactionAmount(transaction.amount)}`}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )),
+    [transactions, deletingId]
+  )
 
   return (
     <div className="animate-in fade-in duration-300 h-full flex flex-col">
@@ -214,7 +353,7 @@ export function CalculatorTab() {
             <div>
               <div className="text-sm text-[#9b9b95]">Общий баланс</div>
               <div className={`text-xl font-semibold ${totalBalance >= 0 ? "text-[#7fb89b]" : "text-[#d56a72]"}`}>
-                {formatAmount(totalBalance)}
+                {formatTransactionAmount(totalBalance)}
               </div>
             </div>
           </div>
@@ -227,7 +366,7 @@ export function CalculatorTab() {
             </div>
             <div>
               <div className="text-sm text-[#9b9b95]">Доходы</div>
-              <div className="text-xl font-semibold text-[#7fb89b]">{formatAmount(totalPositive)}</div>
+              <div className="text-xl font-semibold text-[#7fb89b]">{formatTransactionAmount(totalPositive)}</div>
             </div>
           </div>
         </div>
@@ -239,7 +378,7 @@ export function CalculatorTab() {
             </div>
             <div>
               <div className="text-sm text-[#9b9b95]">Расходы</div>
-              <div className="text-xl font-semibold text-[#d56a72]">{formatAmount(totalNegative)}</div>
+              <div className="text-xl font-semibold text-[#d56a72]">{formatTransactionAmount(totalNegative)}</div>
             </div>
           </div>
         </div>
@@ -251,23 +390,26 @@ export function CalculatorTab() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#9b9b95] mb-2">Сумма</label>
+              <label htmlFor="transaction-amount" className="block text-sm font-medium text-[#9b9b95] mb-2">Сумма</label>
               <input
+                id="transaction-amount"
                 type="text"
+                inputMode="decimal"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="800, -700, 900"
-                className={`w-full px-4 py-3 bg-[var(--tor-bg-input)] border rounded-lg text-[#f2f0ec] placeholder-[#767a80] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#c84b55]/35 focus:border-[#c84b55] ${
+                onChange={(e) => updateAmount(e.target.value)}
+                placeholder="25 000 000"
+                className={`w-full px-4 py-3 bg-[var(--tor-bg-input)] border rounded-lg text-[#f2f0ec] placeholder-[#767a80] tabular-nums transition-[border-color,box-shadow] duration-200 focus:outline-none focus:ring-2 focus:ring-[#c84b55]/35 focus:border-[#c84b55] ${
                   error ? "border-[#c84b55] animate-shake" : "border-[var(--tor-border)]"
                 } ${success ? "animate-success-pulse border-[#7fb89b]" : ""}`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#9b9b95] mb-2">Комментарий</label>
+              <label htmlFor="transaction-comment" className="block text-sm font-medium text-[#9b9b95] mb-2">Комментарий</label>
               <textarea
+                id="transaction-comment"
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={(e) => updateComment(e.target.value)}
                 placeholder="Введите комментарий к сделке..."
                 rows={3}
                 className="w-full px-4 py-3 bg-[var(--tor-bg-input)] border border-[var(--tor-border)] rounded-lg text-[#f2f0ec] placeholder-[#767a80] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#c84b55]/35 focus:border-[#c84b55] resize-none"
@@ -290,7 +432,7 @@ export function CalculatorTab() {
               <div className="grid grid-cols-2 gap-1">
                 <button
                   type="button"
-                  onClick={() => setGoalMode("with")}
+                  onClick={() => chooseGoalMode("with")}
                   className={`rounded-md px-3 py-2 text-sm transition-colors ${
                     goalMode === "with" ? "bg-[var(--tor-bg-soft)] text-[#f2f0ec]" : "text-[#9b9b95] hover:text-[#f2f0ec]"
                   }`}
@@ -300,12 +442,12 @@ export function CalculatorTab() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setGoalMode("without")}
+                  onClick={() => chooseGoalMode("without")}
                   className={`rounded-md px-3 py-2 text-sm transition-colors ${
                     goalMode === "without" ? "bg-[var(--tor-bg-soft)] text-[#f2f0ec]" : "text-[#9b9b95] hover:text-[#f2f0ec]"
                   }`}
                 >
-                  Не в цель
+                  Без цели
                 </button>
               </div>
             </div>
@@ -337,45 +479,7 @@ export function CalculatorTab() {
                 <p className="text-sm">Добавьте первую сделку</p>
               </div>
             ) : (
-              transactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className={`group relative rounded-lg p-4 border transition-all duration-200 ${
-                    deletingId === transaction.id ? "animate-slide-out-up" : "animate-scale-in"
-                  } ${
-                    transaction.amount >= 0
-                      ? "bg-[#18231f] border-[#7fb89b]/25 hover:border-[#7fb89b]/45"
-                      : "bg-[#271b1d] border-[#c84b55]/25 hover:border-[#c84b55]/45"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div
-                        className={`text-xl font-bold ${
-                          transaction.amount >= 0 ? "text-[#7fb89b]" : "text-[#d56a72]"
-                        }`}
-                      >
-                        {formatAmount(transaction.amount)}
-                      </div>
-                      {transaction.comment && (
-                        <p className="text-[#9b9b95] text-sm mt-1 break-words">
-                          {transaction.comment}
-                        </p>
-                      )}
-                      <p className="text-[#767a80] text-xs mt-2">
-                        {formatDate(transaction.createdAt)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(transaction.id)}
-                      className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-[#d56a72] hover:bg-[#c84b55]/12 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))
+              transactionRows
             )}
           </div>
         </div>

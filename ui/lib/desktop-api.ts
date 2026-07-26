@@ -20,11 +20,12 @@ export function onDesktopReady(cb: () => void): () => void {
   window.addEventListener("pywebviewready", handler as any)
   window.addEventListener("_pywebviewready", handler as any)
 
-  setTimeout(() => {
+  const readyCheck = window.setTimeout(() => {
     if (isDesktop()) cb()
   }, 0)
 
   return () => {
+    window.clearTimeout(readyCheck)
     window.removeEventListener("pywebviewready", handler as any)
     window.removeEventListener("_pywebviewready", handler as any)
   }

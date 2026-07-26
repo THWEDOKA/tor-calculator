@@ -1,35 +1,37 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import dynamic from "next/dynamic"
 import { MainWindow } from "./main-window"
 import { WindowTitlebar } from "./window-titlebar"
 import { WebTopbar } from "./web-topbar"
-import { StartupSplash, WhatsNewDialog } from "./startup-experience"
+import { StartupSplash } from "./startup-experience"
 import { callDesktop, isDesktop, onDesktopReady } from "@/lib/desktop-api"
 import { applySavedThemeColors, applySavedThemeColorsAsync } from "@/lib/accent-color"
 
-const CURRENT_VERSION = "0.0.4"
+const CURRENT_VERSION = "0.0.5"
 const WHATS_NEW_KEY = `tor-whats-new-seen-${CURRENT_VERSION}`
+const MIN_STARTUP_SPLASH_MS = 700
+const WhatsNewDialog = dynamic(
+  () => import("./whats-new-dialog").then((module) => module.WhatsNewDialog)
+)
 
 export function TorCalculatorApp() {
-  const [isTransitioning, setIsTransitioning] = useState(false)
   const [startupProgress, setStartupProgress] = useState(0)
   const [showStartup, setShowStartup] = useState(true)
   const [showWhatsNew, setShowWhatsNew] = useState(false)
   const [acceptingWhatsNew, setAcceptingWhatsNew] = useState(false)
   const startupBeganAt = useRef<number | null>(null)
-  const [mode, setMode] = useState<"detecting" | "desktop" | "web">(() => {
-    if (typeof window === "undefined") return "detecting"
-    try {
-      const q = new URLSearchParams(window.location.search)
-      if (q.get("torcalc_desktop") === "1") return "desktop"
-    } catch {
-    }
-    return "detecting"
-  })
+  const [mode, setMode] = useState<"detecting" | "desktop" | "web">("detecting")
 
   useEffect(() => {
     applySavedThemeColors()
+    try {
+      const query = new URLSearchParams(window.location.search)
+      if (query.get("torcalc_desktop") === "1") setMode("desktop")
+    } catch {
+      // Desktop API ниже остаётся основным источником режима.
+    }
     const loadDesktopMode = () => {
       setMode("desktop")
       void applySavedThemeColorsAsync()
@@ -53,18 +55,18 @@ export function TorCalculatorApp() {
       const elapsed = performance.now() - (startupBeganAt.current ?? performance.now())
       setStartupProgress((current) => {
         if (mode === "detecting") {
-          return Math.min(88, Math.max(current + 1, Math.floor(elapsed / 15)))
+          return Math.min(88, Math.max(current, Math.floor(elapsed / 8)))
         }
-        if (elapsed < 1200) return Math.min(96, current + 3)
-        return Math.min(100, current + 4)
+        const readyProgress = Math.floor((elapsed / MIN_STARTUP_SPLASH_MS) * 100)
+        return Math.min(100, Math.max(current, readyProgress))
       })
-    }, 48)
+    }, 32)
     return () => window.clearInterval(timer)
   }, [mode])
 
   useEffect(() => {
     if (startupProgress !== 100) return
-    const timer = window.setTimeout(() => setShowStartup(false), 240)
+    const timer = window.setTimeout(() => setShowStartup(false), 120)
     return () => window.clearTimeout(timer)
   }, [startupProgress])
 
@@ -121,7 +123,7 @@ export function TorCalculatorApp() {
     <div className="h-screen w-screen bg-[var(--tor-bg-dark)]">
       <div className="h-full w-full overflow-hidden bg-[var(--tor-bg-dark)] border border-[var(--tor-border-soft)]">
         {mode === "desktop" ? <WindowTitlebar /> : <WebTopbar />}
-        <div className={`${isTransitioning ? "opacity-0" : "opacity-100"} transition-opacity duration-300 h-[calc(100%-44px)]`}>
+        <div className="h-[calc(100%-44px)]">
           {mode === "detecting" ? (
             <div className="h-full w-full flex items-center justify-center">
               <div className="text-center">
@@ -135,11 +137,12 @@ export function TorCalculatorApp() {
         </div>
       </div>
       {showStartup && <StartupSplash progress={startupProgress} />}
-      <WhatsNewDialog
-        open={showWhatsNew}
-        accepting={acceptingWhatsNew}
-        onAccept={() => void acceptWhatsNew()}
-      />
+      {showWhatsNew && (
+        <WhatsNewDialog
+          accepting={acceptingWhatsNew}
+          onAccept={() => void acceptWhatsNew()}
+        />
+      )}
     </div>
   )
 }

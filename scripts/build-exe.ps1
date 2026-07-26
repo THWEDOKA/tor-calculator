@@ -6,11 +6,13 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $UiDir = Join-Path $RepoRoot "ui"
+$UiOutDir = Join-Path $UiDir "out"
 $OutputDir = Join-Path $RepoRoot "release"
 $IconPath = Join-Path $RepoRoot "icon.png"
 $AddSoundsDir = Join-Path $RepoRoot "sounds\transaction-add"
 $DeleteSoundsDir = Join-Path $RepoRoot "sounds\transaction-delete"
 $OneFile = -not $Standalone
+$AppVersion = "0.0.5"
 
 function Invoke-CheckedCommand {
     param(
@@ -61,10 +63,14 @@ Invoke-CheckedCommand -FilePath $Py.File -Arguments ($Py.Prefix + @("-m", "pip",
 
 Write-Host "==> Installing UI dependencies"
 Push-Location $UiDir
-Invoke-CheckedCommand -FilePath "npm" -Arguments @("install")
+Invoke-CheckedCommand -FilePath "npm" -Arguments @("ci", "--prefer-offline", "--no-audit", "--no-fund")
 Write-Host "==> Building UI production bundle"
 Invoke-CheckedCommand -FilePath "npm" -Arguments @("run", "build")
 Pop-Location
+
+if (-not (Test-Path (Join-Path $UiOutDir "index.html"))) {
+    throw "Static UI export not found after build: $UiOutDir"
+}
 
 Write-Host "==> Building executable with Nuitka"
 New-Item -ItemType Directory -Force $OutputDir | Out-Null
@@ -77,7 +83,7 @@ $nuitkaArgs = $Py.Prefix + @(
     "--windows-icon-from-ico=$IconPath",
     "--output-dir=$OutputDir",
     "--output-filename=TorCalculator.exe",
-    "--include-data-dir=$UiDir=ui",
+    "--include-data-dir=$UiOutDir=ui/out",
     "--include-data-dir=$AddSoundsDir=sounds/transaction-add",
     "--include-data-dir=$DeleteSoundsDir=sounds/transaction-delete",
     (Join-Path $RepoRoot "app.py")
@@ -85,6 +91,7 @@ $nuitkaArgs = $Py.Prefix + @(
 
 if ($OneFile) {
     $nuitkaArgs += "--onefile"
+    $nuitkaArgs += "--onefile-tempdir-spec={CACHE_DIR}/TorCalculator/$AppVersion"
     Write-Host "==> Build mode: onefile (single exe)"
 } else {
     $nuitkaArgs += "--standalone"

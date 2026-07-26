@@ -178,9 +178,11 @@ export function applySavedThemeColors() {
 }
 
 export async function applySavedThemeColorsAsync() {
-  const accent = await loadAccentColorAsync()
+  const [accent, background] = await Promise.all([
+    loadAccentColorAsync(),
+    loadBackgroundColorAsync(),
+  ])
   applyAccentColor(accent)
-  const background = await loadBackgroundColorAsync()
   applyBackgroundColor(background)
   return { accent, background }
 }

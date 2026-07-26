@@ -13,8 +13,8 @@ TorCalculator is a local desktop app with a Python host and a Next.js UI:
 1. `app.py` starts.
 2. Desktop API (`DesktopApi`) initializes SQLite and exposes methods to UI.
 3. UI is served either:
-   - from production bundle (`ui/.next/BUILD_ID` exists), or
-   - from dev server fallback (`npm run dev`).
+   - from the static production export (`ui/out/index.html`), or
+   - from the Next.js dev server when `--dev` is used or no export is available.
 4. pywebview opens UI and bridges JS <-> Python calls.
 
 ## Data model
@@ -46,8 +46,7 @@ Use:
 powershell -ExecutionPolicy Bypass -File .\scripts\build-exe.ps1
 ```
 
-Options:
-
-- `-OneFile` - build one-file executable (longer startup, simpler distribution).
+By default the script builds a one-file executable with a versioned extraction cache.
+Use `-Standalone` to build a folder-based distribution instead.
 
 Build output is placed in `release/`.
