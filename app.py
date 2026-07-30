@@ -523,16 +523,9 @@ class DesktopApi:
 
             if native_handle:
                 user32 = ctypes.windll.user32
-                user32.SetWindowPos.argtypes = [
-                    ctypes.c_void_p,
-                    ctypes.c_void_p,
-                    ctypes.c_int,
-                    ctypes.c_int,
-                    ctypes.c_int,
-                    ctypes.c_int,
-                    ctypes.c_uint,
-                ]
-                user32.SetWindowPos.restype = ctypes.c_int
+                # Do not assign SetWindowPos.argtypes here. pywebview reuses this
+                # ctypes function and passes None for the unused size parameters
+                # while dragging; a strict signature breaks every later drag.
                 user32.BringWindowToTop.argtypes = [ctypes.c_void_p]
                 user32.BringWindowToTop.restype = ctypes.c_int
                 user32.SetForegroundWindow.argtypes = [ctypes.c_void_p]
