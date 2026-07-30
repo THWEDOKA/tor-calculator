@@ -475,17 +475,47 @@ class DesktopApi:
             self._logger.exception("window_minimize failed")
             return False
 
+    def _native_window_handle(self) -> Optional[int]:
+        if os.name != "nt" or not self._window:
+            return None
+        native = getattr(self._window, "native", None)
+        handle = getattr(native, "Handle", None)
+        if handle is None:
+            return None
+        to_int64 = getattr(handle, "ToInt64", None)
+        return int(to_int64() if callable(to_int64) else handle)
+
+    def _native_window_is_active(self, native_handle: int) -> bool:
+        user32 = ctypes.windll.user32
+        user32.IsIconic.argtypes = [ctypes.c_void_p]
+        user32.IsIconic.restype = ctypes.c_int
+        user32.IsWindowVisible.argtypes = [ctypes.c_void_p]
+        user32.IsWindowVisible.restype = ctypes.c_int
+        user32.GetForegroundWindow.argtypes = []
+        user32.GetForegroundWindow.restype = ctypes.c_void_p
+        return bool(
+            user32.IsWindowVisible(native_handle)
+            and not user32.IsIconic(native_handle)
+            and int(user32.GetForegroundWindow() or 0) == native_handle
+        )
+
+    def window_toggle_hotkey(self) -> bool:
+        """Show the window from another app, or minimize it when already active."""
+        try:
+            native_handle = self._native_window_handle()
+            if native_handle and self._native_window_is_active(native_handle):
+                self._logger.info("Window minimized by global hotkey")
+                return self.window_minimize()
+            return self.window_raise()
+        except Exception:
+            self._logger.exception("window_toggle_hotkey failed")
+            return False
+
     def window_raise(self) -> bool:
         if not self._window:
             return False
         try:
-            native_handle = None
-            if os.name == "nt":
-                native = getattr(self._window, "native", None)
-                handle = getattr(native, "Handle", None)
-                if handle is not None:
-                    to_int64 = getattr(handle, "ToInt64", None)
-                    native_handle = int(to_int64() if callable(to_int64) else handle)
+            native_handle = self._native_window_handle()
 
             if native_handle:
                 user32 = ctypes.windll.user32
@@ -505,7 +535,13 @@ class DesktopApi:
                 user32.BringWindowToTop.restype = ctypes.c_int
                 user32.SetForegroundWindow.argtypes = [ctypes.c_void_p]
                 user32.SetForegroundWindow.restype = ctypes.c_int
+                user32.ReleaseCapture.argtypes = []
+                user32.ReleaseCapture.restype = ctypes.c_int
+                user32.ClipCursor.argtypes = [ctypes.c_void_p]
+                user32.ClipCursor.restype = ctypes.c_int
                 flags = 0x0001 | 0x0002 | 0x0040  # NOSIZE | NOMOVE | SHOWWINDOW
+                user32.ReleaseCapture()
+                user32.ClipCursor(None)
                 user32.ShowWindow(native_handle, 9)  # SW_RESTORE
                 user32.SetWindowPos(
                     native_handle,
@@ -518,37 +554,27 @@ class DesktopApi:
                 )
                 user32.BringWindowToTop(native_handle)
                 user32.SetForegroundWindow(native_handle)
+                # A short topmost pulse is enough to rise over a game. Releasing it
+                # synchronously avoids interrupting a title-bar drag moments later.
+                user32.SetWindowPos(
+                    native_handle,
+                    ctypes.c_void_p(-2),  # HWND_NOTOPMOST
+                    0,
+                    0,
+                    0,
+                    0,
+                    flags | 0x0010,  # SWP_NOACTIVATE
+                )
+                user32.ReleaseCapture()
+                user32.ClipCursor(None)
             else:
                 self._window.restore()
                 self._window.on_top = True
                 self._window.show()
-
-            def release_topmost() -> None:
-                time.sleep(0.8)
                 try:
-                    if native_handle and os.name == "nt":
-                        user32.SetWindowPos(
-                            native_handle,
-                            ctypes.c_void_p(-2),  # HWND_NOTOPMOST
-                            0,
-                            0,
-                            0,
-                            0,
-                            0x0001 | 0x0002,
-                        )
-                    elif self._window:
-                        self._window.on_top = False
+                    self._window.on_top = False
                 except Exception:
-                    self._logger.debug(
-                        "Could not release hotkey topmost mode",
-                        exc_info=True,
-                    )
-
-            threading.Thread(
-                target=release_topmost,
-                name="release-hotkey-topmost",
-                daemon=True,
-            ).start()
+                    self._logger.debug("Could not release hotkey topmost mode", exc_info=True)
             self._logger.info("Window raised by global hotkey")
             return True
         except Exception:
@@ -1297,7 +1323,7 @@ def main() -> int:
         hotkey_config = api.hotkey_settings_get()
         hotkey_listener = GlobalHotkeyListener(
             logger,
-            api.window_raise,
+            api.window_toggle_hotkey,
             key=str(hotkey_config.get("key", DEFAULT_HOTKEY_KEY)),
             press_count=int(
                 hotkey_config.get("pressCount", DEFAULT_HOTKEY_PRESS_COUNT)

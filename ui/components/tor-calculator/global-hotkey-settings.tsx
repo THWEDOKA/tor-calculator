@@ -167,7 +167,7 @@ export function GlobalHotkeySettings() {
           <div>
             <h2 className="text-lg font-semibold text-[#f2f0ec]">Быстрый вызов</h2>
             <p className="mt-0.5 text-sm text-[#9b9b95]">
-              Поднимает приложение поверх других окон
+              Показывает приложение поверх окон или сворачивает его обратно
             </p>
           </div>
         </div>
@@ -254,7 +254,8 @@ export function GlobalHotkeySettings() {
 
       <p className="mt-3 text-xs leading-5 text-[#767a80]">
         Последовательные нажатия учитываются с паузой не более 650 мс. Клавиша продолжает
-        работать в игре или другой программе как обычно.
+        работать в игре или другой программе как обычно. Повторите комбинацию, чтобы
+        свернуть приложение.
       </p>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tor-border-soft)] pt-4">
