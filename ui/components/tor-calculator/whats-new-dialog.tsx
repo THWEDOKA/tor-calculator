@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Keyboard, MousePointer2, Sparkles } from "lucide-react"
+import { Check, Keyboard, MonitorCheck, Sparkles } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -12,14 +12,14 @@ import {
 
 const releaseItems = [
   {
-    icon: MousePointer2,
-    title: "Свободный курсор после игры",
-    text: "При появлении TorCalculator освобождает курсор от игрового захвата, поэтому окно снова можно нормально перемещать мышью.",
+    icon: MonitorCheck,
+    title: "Без чёрного окна",
+    text: "После сворачивания TorCalculator корректно восстанавливает и перерисовывает весь интерфейс.",
   },
   {
     icon: Keyboard,
-    title: "Показать и свернуть одной клавишей",
-    text: "Настроенная комбинация показывает приложение поверх игры, а повторное нажатие сворачивает его обратно.",
+    title: "Стабильный быстрый вызов",
+    text: "Настроенная комбинация по-прежнему показывает приложение поверх игры, а повторное нажатие сворачивает его.",
   },
 ]
 
@@ -44,13 +44,13 @@ export function WhatsNewDialog({
           </div>
           <DialogHeader className="text-left">
             <div className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--tor-accent-strong)]">
-              Обновление 0.0.7
+              Обновление 0.0.8
             </div>
             <DialogTitle className="text-2xl leading-tight tracking-[-0.025em]">
               Что нового в TorCalculator
             </DialogTitle>
             <DialogDescription className="text-[#9b9b95]">
-              Быстрый вызов теперь работает как удобный переключатель поверх игры.
+              Исправлено восстановление интерфейса после сворачивания.
             </DialogDescription>
           </DialogHeader>
         </div>

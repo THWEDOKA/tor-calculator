@@ -38,7 +38,7 @@ UI_DIR = PROJECT_ROOT / "ui"
 LOG_FILE = PROJECT_ROOT / "debug.log"
 APP_NAME = "TorCalculator"
 APP_WINDOW_TITLE = "TorCalculator - /promo ETTORE"
-APP_VERSION = "0.0.7"
+APP_VERSION = "0.0.8"
 SOUNDS_DIR = PROJECT_ROOT / "sounds"
 SOUND_ACTION_DIRS = {
     "add": SOUNDS_DIR / "transaction-add",

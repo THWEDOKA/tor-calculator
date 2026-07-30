@@ -12,7 +12,7 @@ $IconPath = Join-Path $RepoRoot "icon.png"
 $AddSoundsDir = Join-Path $RepoRoot "sounds\transaction-add"
 $DeleteSoundsDir = Join-Path $RepoRoot "sounds\transaction-delete"
 $OneFile = -not $Standalone
-$AppVersion = "0.0.7"
+$AppVersion = "0.0.8"
 
 function Invoke-CheckedCommand {
     param(
