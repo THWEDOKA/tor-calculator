@@ -10,7 +10,7 @@ import { callDesktop, isDesktop, onDesktopReady } from "@/lib/desktop-api"
 import { applySavedThemeColors, applySavedThemeColorsAsync } from "@/lib/accent-color"
 import { initializeSoundSettings, installSoundUnlock } from "@/lib/sound-settings"
 
-const CURRENT_VERSION = "0.0.8"
+const CURRENT_VERSION = "0.0.9"
 const WHATS_NEW_KEY = `tor-whats-new-seen-${CURRENT_VERSION}`
 const MIN_STARTUP_SPLASH_MS = 700
 const WhatsNewDialog = dynamic(
