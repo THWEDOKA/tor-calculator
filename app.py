@@ -515,12 +515,14 @@ class DesktopApi:
         if not self._window:
             return False
         try:
+            # Restore through pywebview first so WinForms and WebView2 update their
+            # internal window state on the UI thread. A direct ShowWindow restore
+            # can leave the WebView2 composition surface black.
+            self._window.restore()
             native_handle = self._native_window_handle()
 
             if native_handle:
                 user32 = ctypes.windll.user32
-                user32.ShowWindow.argtypes = [ctypes.c_void_p, ctypes.c_int]
-                user32.ShowWindow.restype = ctypes.c_int
                 user32.SetWindowPos.argtypes = [
                     ctypes.c_void_p,
                     ctypes.c_void_p,
@@ -539,10 +541,16 @@ class DesktopApi:
                 user32.ReleaseCapture.restype = ctypes.c_int
                 user32.ClipCursor.argtypes = [ctypes.c_void_p]
                 user32.ClipCursor.restype = ctypes.c_int
+                user32.RedrawWindow.argtypes = [
+                    ctypes.c_void_p,
+                    ctypes.c_void_p,
+                    ctypes.c_void_p,
+                    ctypes.c_uint,
+                ]
+                user32.RedrawWindow.restype = ctypes.c_int
                 flags = 0x0001 | 0x0002 | 0x0040  # NOSIZE | NOMOVE | SHOWWINDOW
                 user32.ReleaseCapture()
                 user32.ClipCursor(None)
-                user32.ShowWindow(native_handle, 9)  # SW_RESTORE
                 user32.SetWindowPos(
                     native_handle,
                     ctypes.c_void_p(-1),  # HWND_TOPMOST
@@ -567,8 +575,23 @@ class DesktopApi:
                 )
                 user32.ReleaseCapture()
                 user32.ClipCursor(None)
+                user32.RedrawWindow(
+                    native_handle,
+                    None,
+                    None,
+                    0x0001 | 0x0080 | 0x0100 | 0x0400,
+                    # INVALIDATE | FRAME | UPDATENOW | ALLCHILDREN
+                )
+                try:
+                    self._window.evaluate_js(
+                        "window.dispatchEvent(new Event('resize')); true"
+                    )
+                except Exception:
+                    self._logger.debug(
+                        "Could not request WebView redraw after restore",
+                        exc_info=True,
+                    )
             else:
-                self._window.restore()
                 self._window.on_top = True
                 self._window.show()
                 try:
