@@ -12,9 +12,11 @@ import {
   Palette,
   SlidersHorizontal,
   Volume2,
+  Keyboard,
 } from "lucide-react"
 import { callDesktop, isDesktop } from "@/lib/desktop-api"
 import { SoundSettings } from "@/components/tor-calculator/sound-settings"
+import { GlobalHotkeySettings } from "@/components/tor-calculator/global-hotkey-settings"
 import { playActionSound } from "@/lib/sound-settings"
 import {
   ACCENT_PRESETS,
@@ -50,7 +52,7 @@ function loadWebTransactions(): WebTransaction[] {
 
 export function SettingsTab({ onClearData }: SettingsTabProps) {
   const [showClearModal, setShowClearModal] = useState(false)
-  const [section, setSection] = useState<"general" | "sounds">("general")
+  const [section, setSection] = useState<"general" | "sounds" | "hotkey">("general")
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT_COLOR)
   const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR)
 
@@ -176,10 +178,25 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
           <Volume2 className="h-4 w-4" />
           Звуки
         </button>
+        <button
+          type="button"
+          onClick={() => setSection("hotkey")}
+          aria-current={section === "hotkey" ? "page" : undefined}
+          className={`inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-medium transition-colors ${
+            section === "hotkey"
+              ? "bg-[var(--tor-bg-soft)] text-[#f2f0ec]"
+              : "text-[#9b9b95] hover:text-[#f2f0ec]"
+          }`}
+        >
+          <Keyboard className="h-4 w-4" />
+          Быстрый вызов
+        </button>
       </nav>
 
       {section === "sounds" ? (
         <SoundSettings />
+      ) : section === "hotkey" ? (
+        <GlobalHotkeySettings />
       ) : (
       <>
       <div className="grid grid-cols-2 gap-6">

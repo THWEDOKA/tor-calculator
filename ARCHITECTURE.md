@@ -7,6 +7,7 @@ TorCalculator is a local desktop app with a Python host and a Next.js UI:
 - `app.py` - desktop host (pywebview), local API, SQLite persistence, export/backup
 - `ui/` - Next.js interface (tabs, components, styles)
 - `scripts/build-exe.ps1` - reproducible Windows `.exe` build with Nuitka
+- `global_hotkey.py` - Windows low-level keyboard listener for the configurable raise-window shortcut
 
 ## Runtime flow
 

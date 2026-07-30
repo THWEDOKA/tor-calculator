@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import atexit
 import base64
+import ctypes
 import json
 import logging
 from logging.handlers import RotatingFileHandler
@@ -20,6 +21,16 @@ from datetime import datetime, timezone
 import http.client
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
+
+from global_hotkey import (
+    DEFAULT_HOTKEY_KEY,
+    DEFAULT_HOTKEY_PRESS_COUNT,
+    HOTKEY_CHOICES,
+    MAX_HOTKEY_PRESS_COUNT,
+    MIN_HOTKEY_PRESS_COUNT,
+    GlobalHotkeyListener,
+    normalize_hotkey_config,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -415,6 +426,7 @@ class DesktopApi:
     def __init__(self, logger: logging.Logger, *, data_dir: Path, db_path: Path):
         self._logger = logger
         self._window = None
+        self._hotkey_listener: Optional[GlobalHotkeyListener] = None
         self._data_dir = data_dir
         self._db_path = db_path
         self._lock = threading.Lock()
@@ -424,6 +436,9 @@ class DesktopApi:
 
     def bind_window(self, window) -> None:
         self._window = window
+
+    def bind_hotkey_listener(self, listener: GlobalHotkeyListener) -> None:
+        self._hotkey_listener = listener
 
     def reload(self) -> bool:
         self._logger.info("Reload requested")
@@ -458,6 +473,86 @@ class DesktopApi:
             return True
         except Exception:
             self._logger.exception("window_minimize failed")
+            return False
+
+    def window_raise(self) -> bool:
+        if not self._window:
+            return False
+        try:
+            native_handle = None
+            if os.name == "nt":
+                native = getattr(self._window, "native", None)
+                handle = getattr(native, "Handle", None)
+                if handle is not None:
+                    to_int64 = getattr(handle, "ToInt64", None)
+                    native_handle = int(to_int64() if callable(to_int64) else handle)
+
+            if native_handle:
+                user32 = ctypes.windll.user32
+                user32.ShowWindow.argtypes = [ctypes.c_void_p, ctypes.c_int]
+                user32.ShowWindow.restype = ctypes.c_int
+                user32.SetWindowPos.argtypes = [
+                    ctypes.c_void_p,
+                    ctypes.c_void_p,
+                    ctypes.c_int,
+                    ctypes.c_int,
+                    ctypes.c_int,
+                    ctypes.c_int,
+                    ctypes.c_uint,
+                ]
+                user32.SetWindowPos.restype = ctypes.c_int
+                user32.BringWindowToTop.argtypes = [ctypes.c_void_p]
+                user32.BringWindowToTop.restype = ctypes.c_int
+                user32.SetForegroundWindow.argtypes = [ctypes.c_void_p]
+                user32.SetForegroundWindow.restype = ctypes.c_int
+                flags = 0x0001 | 0x0002 | 0x0040  # NOSIZE | NOMOVE | SHOWWINDOW
+                user32.ShowWindow(native_handle, 9)  # SW_RESTORE
+                user32.SetWindowPos(
+                    native_handle,
+                    ctypes.c_void_p(-1),  # HWND_TOPMOST
+                    0,
+                    0,
+                    0,
+                    0,
+                    flags,
+                )
+                user32.BringWindowToTop(native_handle)
+                user32.SetForegroundWindow(native_handle)
+            else:
+                self._window.restore()
+                self._window.on_top = True
+                self._window.show()
+
+            def release_topmost() -> None:
+                time.sleep(0.8)
+                try:
+                    if native_handle and os.name == "nt":
+                        user32.SetWindowPos(
+                            native_handle,
+                            ctypes.c_void_p(-2),  # HWND_NOTOPMOST
+                            0,
+                            0,
+                            0,
+                            0,
+                            0x0001 | 0x0002,
+                        )
+                    elif self._window:
+                        self._window.on_top = False
+                except Exception:
+                    self._logger.debug(
+                        "Could not release hotkey topmost mode",
+                        exc_info=True,
+                    )
+
+            threading.Thread(
+                target=release_topmost,
+                name="release-hotkey-topmost",
+                daemon=True,
+            ).start()
+            self._logger.info("Window raised by global hotkey")
+            return True
+        except Exception:
+            self._logger.exception("window_raise failed")
             return False
 
     def window_close(self) -> bool:
@@ -573,6 +668,68 @@ class DesktopApi:
             return {"ok": True}
         except Exception:
             self._logger.exception("setting_delete failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def hotkey_settings_get(self) -> dict:
+        try:
+            with self._lock:
+                rows = self._conn.execute(
+                    "SELECT key, value FROM settings WHERE key IN (?, ?)",
+                    ("hotkey:key", "hotkey:press-count"),
+                ).fetchall()
+            values = {str(row["key"]): str(row["value"]) for row in rows}
+            key, press_count = normalize_hotkey_config(
+                values.get("hotkey:key", DEFAULT_HOTKEY_KEY),
+                values.get("hotkey:press-count", DEFAULT_HOTKEY_PRESS_COUNT),
+            )
+            listener = self._hotkey_listener
+            return {
+                "ok": True,
+                "key": key,
+                "pressCount": press_count,
+                "supported": os.name == "nt",
+                "running": bool(listener and listener.running),
+            }
+        except Exception:
+            self._logger.exception("hotkey_settings_get failed")
+            return {"ok": False, "error": "INTERNAL_ERROR"}
+
+    def hotkey_settings_set(self, key: str, press_count: int | str) -> dict:
+        try:
+            normalized_key = str(key or "").strip().lower()
+            if normalized_key not in HOTKEY_CHOICES:
+                return {"ok": False, "error": "INVALID_HOTKEY"}
+            try:
+                normalized_count = int(press_count)
+            except (TypeError, ValueError):
+                return {"ok": False, "error": "INVALID_PRESS_COUNT"}
+            if not MIN_HOTKEY_PRESS_COUNT <= normalized_count <= MAX_HOTKEY_PRESS_COUNT:
+                return {"ok": False, "error": "INVALID_PRESS_COUNT"}
+
+            with self._lock:
+                self._conn.executemany(
+                    """
+                    INSERT INTO settings(key, value) VALUES (?, ?)
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                    """,
+                    (
+                        ("hotkey:key", normalized_key),
+                        ("hotkey:press-count", str(normalized_count)),
+                    ),
+                )
+                self._conn.commit()
+
+            if self._hotkey_listener:
+                self._hotkey_listener.update(normalized_key, normalized_count)
+            return {
+                "ok": True,
+                "key": normalized_key,
+                "pressCount": normalized_count,
+                "supported": os.name == "nt",
+                "running": bool(self._hotkey_listener and self._hotkey_listener.running),
+            }
+        except Exception:
+            self._logger.exception("hotkey_settings_set failed")
             return {"ok": False, "error": "INTERNAL_ERROR"}
 
     def transactions_list(self) -> dict:
@@ -945,6 +1102,8 @@ class DesktopApi:
             return {"ok": False, "error": "INTERNAL_ERROR"}
 
     def close(self) -> None:
+        if self._hotkey_listener:
+            self._hotkey_listener.stop()
         try:
             with self._lock:
                 self._conn.close()
@@ -1135,11 +1294,23 @@ def main() -> int:
             background_color="#0e0e0e",
         )
         api.bind_window(window)
+        hotkey_config = api.hotkey_settings_get()
+        hotkey_listener = GlobalHotkeyListener(
+            logger,
+            api.window_raise,
+            key=str(hotkey_config.get("key", DEFAULT_HOTKEY_KEY)),
+            press_count=int(
+                hotkey_config.get("pressCount", DEFAULT_HOTKEY_PRESS_COUNT)
+            ),
+        )
+        api.bind_hotkey_listener(hotkey_listener)
+        if not hotkey_listener.start():
+            logger.warning("Global hotkey listener did not start")
 
         def on_loaded() -> None:
             inject_hotkeys(window, logger)
             try:
-                window.focus()
+                window.show()
             except Exception:
                 logger.debug("Could not focus window on startup", exc_info=True)
 

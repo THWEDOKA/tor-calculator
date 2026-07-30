@@ -1,6 +1,6 @@
 "use client"
 
-import { Banknote, Check, Package, ShieldCheck, Sparkles, Volume2 } from "lucide-react"
+import { Banknote, Check, Keyboard, Package, Sparkles, Volume2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -27,9 +27,9 @@ const releaseItems = [
     text: "В окне продажи можно указать проданное количество — оно сохранится в описании сделки.",
   },
   {
-    icon: ShieldCheck,
-    title: "Бережное обновление данных",
-    text: "Старое имущество автоматически получает количество 0, поэтому существующие записи остаются на месте.",
+    icon: Keyboard,
+    title: "Вызов поверх игры",
+    text: "Двойное нажатие клавиши \\ поднимает приложение поверх других окон. Клавишу и количество нажатий можно изменить.",
   },
 ]
 
