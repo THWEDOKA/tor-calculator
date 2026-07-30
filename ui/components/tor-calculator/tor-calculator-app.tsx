@@ -8,8 +8,9 @@ import { WebTopbar } from "./web-topbar"
 import { StartupSplash } from "./startup-experience"
 import { callDesktop, isDesktop, onDesktopReady } from "@/lib/desktop-api"
 import { applySavedThemeColors, applySavedThemeColorsAsync } from "@/lib/accent-color"
+import { initializeSoundSettings, installSoundUnlock } from "@/lib/sound-settings"
 
-const CURRENT_VERSION = "0.0.5"
+const CURRENT_VERSION = "0.0.6"
 const WHATS_NEW_KEY = `tor-whats-new-seen-${CURRENT_VERSION}`
 const MIN_STARTUP_SPLASH_MS = 700
 const WhatsNewDialog = dynamic(
@@ -26,6 +27,7 @@ export function TorCalculatorApp() {
 
   useEffect(() => {
     applySavedThemeColors()
+    const removeSoundUnlock = installSoundUnlock()
     try {
       const query = new URLSearchParams(window.location.search)
       if (query.get("torcalc_desktop") === "1") setMode("desktop")
@@ -35,6 +37,7 @@ export function TorCalculatorApp() {
     const loadDesktopMode = () => {
       setMode("desktop")
       void applySavedThemeColorsAsync()
+      void initializeSoundSettings()
     }
     const off = onDesktopReady(loadDesktopMode)
     if (isDesktop()) loadDesktopMode()
@@ -46,6 +49,7 @@ export function TorCalculatorApp() {
     return () => {
       clearTimeout(t)
       off()
+      removeSoundUnlock()
     }
   }, [])
 

@@ -27,7 +27,7 @@ UI_DIR = PROJECT_ROOT / "ui"
 LOG_FILE = PROJECT_ROOT / "debug.log"
 APP_NAME = "TorCalculator"
 APP_WINDOW_TITLE = "TorCalculator - /promo ETTORE"
-APP_VERSION = "0.0.5"
+APP_VERSION = "0.0.6"
 SOUNDS_DIR = PROJECT_ROOT / "sounds"
 SOUND_ACTION_DIRS = {
     "add": SOUNDS_DIR / "transaction-add",
@@ -384,12 +384,22 @@ def init_db(conn: sqlite3.Connection, logger: logging.Logger) -> None:
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
           purchase_price REAL NOT NULL,
+          quantity INTEGER NOT NULL DEFAULT 0,
           image_data TEXT NOT NULL DEFAULT '',
           purchased_at TEXT NOT NULL,
           purchase_tx_id INTEGER NOT NULL
         )
         """
     )
+    inventory_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(inventory_items)").fetchall()
+    }
+    if "quantity" not in inventory_columns:
+        conn.execute(
+            "ALTER TABLE inventory_items ADD COLUMN quantity INTEGER NOT NULL DEFAULT 0"
+        )
+        logger.info("Database migrated: inventory_items.quantity added")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS settings (
@@ -645,7 +655,7 @@ class DesktopApi:
             with self._lock:
                 rows = self._conn.execute(
                     """
-                    SELECT id, name, purchase_price, image_data, purchased_at, purchase_tx_id
+                    SELECT id, name, purchase_price, quantity, image_data, purchased_at, purchase_tx_id
                     FROM inventory_items
                     ORDER BY purchased_at DESC
                     """
@@ -655,6 +665,7 @@ class DesktopApi:
                     "id": int(r["id"]),
                     "name": r["name"] or "",
                     "purchasePrice": float(r["purchase_price"]),
+                    "quantity": int(r["quantity"]),
                     "imageDataUrl": r["image_data"] or "",
                     "purchasedAt": str(r["purchased_at"]),
                     "purchaseTxId": int(r["purchase_tx_id"]),
@@ -672,6 +683,7 @@ class DesktopApi:
         purchase_price: float | str,
         image_data: str = "",
         add_to_calculator: bool = True,
+        quantity: int | str = 0,
     ) -> dict:
         try:
             try:
@@ -680,12 +692,23 @@ class DesktopApi:
                 return {"ok": False, "error": "INVALID_PRICE"}
             if price <= 0:
                 return {"ok": False, "error": "INVALID_PRICE"}
+            try:
+                quantity_number = float(quantity)
+            except Exception:
+                return {"ok": False, "error": "INVALID_QUANTITY"}
+            if (
+                not quantity_number.is_integer()
+                or quantity_number < 0
+                or quantity_number > 1_000_000_000
+            ):
+                return {"ok": False, "error": "INVALID_QUANTITY"}
+            item_quantity = int(quantity_number)
             nm = (name or "").strip()
             if not nm:
                 return {"ok": False, "error": "INVALID_NAME"}
 
             created_at = _utc_iso_now()
-            comm = f"Покупка предмета: {nm}"
+            comm = f"Покупка предмета: {nm} · Количество: {item_quantity}"
             img = image_data if isinstance(image_data, str) else ""
             add_tx = bool(add_to_calculator)
 
@@ -698,10 +721,12 @@ class DesktopApi:
                     )
                 cur = self._conn.execute(
                     """
-                    INSERT INTO inventory_items(name, purchase_price, image_data, purchased_at, purchase_tx_id)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO inventory_items(
+                        name, purchase_price, quantity, image_data, purchased_at, purchase_tx_id
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (nm, price, img, created_at, tx_id),
+                    (nm, price, item_quantity, img, created_at, tx_id),
                 )
                 item_id = int(cur.lastrowid)
                 self._conn.commit()
@@ -712,6 +737,7 @@ class DesktopApi:
                     "id": item_id,
                     "name": nm,
                     "purchasePrice": price,
+                    "quantity": item_quantity,
                     "imageDataUrl": img,
                     "purchasedAt": created_at,
                     "purchaseTxId": tx_id,
@@ -740,7 +766,13 @@ class DesktopApi:
             self._logger.exception("item_delete failed")
             return {"ok": False, "error": "INTERNAL_ERROR"}
 
-    def item_update(self, item_id: int, name: str, purchase_price: float | str) -> dict:
+    def item_update(
+        self,
+        item_id: int,
+        name: str,
+        purchase_price: float | str,
+        quantity: int | str = 0,
+    ) -> dict:
         try:
             try:
                 price = float(purchase_price)
@@ -748,6 +780,17 @@ class DesktopApi:
                 return {"ok": False, "error": "INVALID_PRICE"}
             if price <= 0:
                 return {"ok": False, "error": "INVALID_PRICE"}
+            try:
+                quantity_number = float(quantity)
+            except Exception:
+                return {"ok": False, "error": "INVALID_QUANTITY"}
+            if (
+                not quantity_number.is_integer()
+                or quantity_number < 0
+                or quantity_number > 1_000_000_000
+            ):
+                return {"ok": False, "error": "INVALID_QUANTITY"}
+            item_quantity = int(quantity_number)
             nm = (name or "").strip()
             if not nm:
                 return {"ok": False, "error": "INVALID_NAME"}
@@ -766,13 +809,21 @@ class DesktopApi:
 
                 purchase_tx_id = int(row["purchase_tx_id"])
                 self._conn.execute(
-                    "UPDATE inventory_items SET name = ?, purchase_price = ? WHERE id = ?",
-                    (nm, price, int(item_id)),
+                    """
+                    UPDATE inventory_items
+                    SET name = ?, purchase_price = ?, quantity = ?
+                    WHERE id = ?
+                    """,
+                    (nm, price, item_quantity, int(item_id)),
                 )
                 if purchase_tx_id > 0:
                     self._conn.execute(
                         "UPDATE transactions SET amount = ?, comment = ? WHERE id = ?",
-                        (-abs(price), f"Покупка предмета: {nm}", purchase_tx_id),
+                        (
+                            -abs(price),
+                            f"Покупка предмета: {nm} · Количество: {item_quantity}",
+                            purchase_tx_id,
+                        ),
                     )
                 self._conn.commit()
 
@@ -782,6 +833,7 @@ class DesktopApi:
                     "id": int(item_id),
                     "name": nm,
                     "purchasePrice": price,
+                    "quantity": item_quantity,
                     "imageDataUrl": row["image_data"] or "",
                     "purchasedAt": str(row["purchased_at"]),
                     "purchaseTxId": purchase_tx_id,
@@ -849,7 +901,7 @@ class DesktopApi:
                 ).fetchall()
                 inv = self._conn.execute(
                     """
-                    SELECT id, name, purchase_price, image_data, purchased_at, purchase_tx_id
+                    SELECT id, name, purchase_price, quantity, image_data, purchased_at, purchase_tx_id
                     FROM inventory_items ORDER BY purchased_at DESC
                     """
                 ).fetchall()
@@ -871,6 +923,7 @@ class DesktopApi:
                     "id": int(r["id"]),
                     "name": r["name"] or "",
                     "purchasePrice": float(r["purchase_price"]),
+                    "quantity": int(r["quantity"]),
                     "imageDataUrl": r["image_data"] or "",
                     "purchasedAt": str(r["purchased_at"]),
                     "purchaseTxId": int(r["purchase_tx_id"]),

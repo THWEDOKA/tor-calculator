@@ -22,7 +22,7 @@ TorCalculator is a local desktop app with a Python host and a Next.js UI:
 - `transactions`:
   - income/expense records used by calculator
 - `inventory_items`:
-  - item registry with optional link to purchase transaction (`purchase_tx_id`)
+  - item registry with quantity and optional link to purchase transaction (`purchase_tx_id`)
 
 If an item is created in "без калькулятора" mode, `purchase_tx_id = 0`.
 

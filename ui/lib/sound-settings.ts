@@ -14,6 +14,13 @@ const LS_SOUND_VOLUME = "tor-sound-volume"
 const DESKTOP_SOUND_VOLUME = "sound:volume"
 const soundDataCache = new Map<string, string>()
 const activeAudio = new Map<SoundAction, HTMLAudioElement>()
+let soundInitialization: Promise<void> | null = null
+let removeUnlockListeners: (() => void) | null = null
+
+// Короткий пустой WAV нужен только для снятия ограничения WebView на первое
+// воспроизведение. Он запускается в момент первого обычного клика пользователя.
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAACAgICA"
 
 export const SOUND_NONE_VALUE = NO_SOUND
 export const DEFAULT_SOUND_VOLUME = DEFAULT_VOLUME
@@ -138,6 +145,52 @@ async function getSoundData(action: SoundAction, filename: string): Promise<stri
   }
 }
 
+export function initializeSoundSettings(): Promise<void> {
+  if (soundInitialization) return soundInitialization
+
+  soundInitialization = (async () => {
+    const [addSelection, deleteSelection] = await Promise.all([
+      loadSoundSelection("add"),
+      loadSoundSelection("delete"),
+      loadSoundVolume(),
+    ])
+
+    await Promise.all([
+      addSelection === NO_SOUND ? null : getSoundData("add", addSelection),
+      deleteSelection === NO_SOUND ? null : getSoundData("delete", deleteSelection),
+    ])
+  })().catch(() => {
+    // Повторная попытка допустима, если desktop API ещё не успел подготовиться.
+    soundInitialization = null
+  })
+
+  return soundInitialization
+}
+
+export function installSoundUnlock(): () => void {
+  if (typeof window === "undefined") return () => {}
+  if (removeUnlockListeners) return removeUnlockListeners
+
+  const unlock = () => {
+    const audio = new Audio(SILENT_WAV)
+    audio.volume = 0
+    void audio.play().catch(() => {})
+    cleanup()
+  }
+  const cleanup = () => {
+    window.removeEventListener("pointerdown", unlock, true)
+    window.removeEventListener("keydown", unlock, true)
+    window.removeEventListener("touchstart", unlock, true)
+    removeUnlockListeners = null
+  }
+
+  window.addEventListener("pointerdown", unlock, true)
+  window.addEventListener("keydown", unlock, true)
+  window.addEventListener("touchstart", unlock, true)
+  removeUnlockListeners = cleanup
+  return cleanup
+}
+
 export async function playSoundFile(action: SoundAction, filename: string): Promise<boolean> {
   if (!filename || filename === NO_SOUND) return false
   const dataUrl = await getSoundData(action, filename)
@@ -165,5 +218,6 @@ export async function playSoundFile(action: SoundAction, filename: string): Prom
 }
 
 export async function playActionSound(action: SoundAction): Promise<boolean> {
+  await initializeSoundSettings()
   return await playSoundFile(action, getSoundSelection(action))
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, ListRestart, Sparkles, Target, Volume2, Wallet } from "lucide-react"
+import { Banknote, Check, Package, ShieldCheck, Sparkles, Volume2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -12,24 +12,24 @@ import {
 
 const releaseItems = [
   {
-    icon: Wallet,
-    title: "Умный ввод суммы",
-    text: "Сумма форматируется прямо во время ввода: 25000000 превращается в 25 000 000.",
-  },
-  {
-    icon: Target,
-    title: "Выборы не сбрасываются",
-    text: "Режимы цели и калькулятора, а также незавершённая сделка сохраняются при переходах.",
-  },
-  {
     icon: Volume2,
-    title: "Громкость звуков",
-    text: "В настройках появилась общая регулировка громкости от 0 до 100 процентов.",
+    title: "Звуки готовы сразу",
+    text: "Выбранные звуки и громкость загружаются при старте — больше не нужно открывать настройки и запускать предпрослушивание.",
   },
   {
-    icon: ListRestart,
-    title: "Надёжный запуск",
-    text: "Окно появляется поверх остальных, а сохранённые сделки загружаются сразу.",
+    icon: Package,
+    title: "Количество имущества",
+    text: "У каждой позиции появилось количество. Если его не указывать, сохраняется ноль.",
+  },
+  {
+    icon: Banknote,
+    title: "Количество при продаже",
+    text: "В окне продажи можно указать проданное количество — оно сохранится в описании сделки.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Бережное обновление данных",
+    text: "Старое имущество автоматически получает количество 0, поэтому существующие записи остаются на месте.",
   },
 ]
 
@@ -54,13 +54,13 @@ export function WhatsNewDialog({
           </div>
           <DialogHeader className="text-left">
             <div className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--tor-accent-strong)]">
-              Обновление 0.0.5
+              Обновление 0.0.6
             </div>
             <DialogTitle className="text-2xl leading-tight tracking-[-0.025em]">
               Что нового в TorCalculator
             </DialogTitle>
             <DialogDescription className="text-[#9b9b95]">
-              Быстрее ввод, надёжнее состояние и точнее звуковая обратная связь.
+              Звуки с первого действия и точный учёт количества имущества.
             </DialogDescription>
           </DialogHeader>
         </div>

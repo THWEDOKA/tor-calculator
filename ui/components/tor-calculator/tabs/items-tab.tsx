@@ -48,6 +48,7 @@ export interface InventoryItem {
   id: number
   name: string
   purchasePrice: number
+  quantity: number
   imageDataUrl: string
   purchasedAt: string
   purchaseTxId: number
@@ -78,6 +79,19 @@ function persistWebTransactions(transactions: WebTransaction[]) {
 
 function formatMoney(n: number) {
   return `$${n.toLocaleString("ru-RU")}`
+}
+
+function normalizeQuantity(value: unknown): number {
+  const quantity = Number(value)
+  return Number.isInteger(quantity) && quantity >= 0 ? quantity : 0
+}
+
+function parseQuantityInput(value: string): number | null {
+  if (value.trim() === "") return 0
+  const quantity = Number(value)
+  return Number.isInteger(quantity) && quantity >= 0 && quantity <= 1_000_000_000
+    ? quantity
+    : null
 }
 
 function formatDateTime(iso: string) {
@@ -113,6 +127,7 @@ async function loadItems(): Promise<InventoryItem[]> {
         id: Number(it.id),
         name: String(it.name ?? ""),
         purchasePrice: Number(it.purchasePrice),
+        quantity: normalizeQuantity(it.quantity),
         imageDataUrl: String(it.imageDataUrl ?? ""),
         purchasedAt: String(it.purchasedAt),
         purchaseTxId: Number(it.purchaseTxId),
@@ -124,7 +139,9 @@ async function loadItems(): Promise<InventoryItem[]> {
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw) as InventoryItem[]
-    return Array.isArray(parsed) ? parsed : []
+    return Array.isArray(parsed)
+      ? parsed.map((item) => ({ ...item, quantity: normalizeQuantity(item.quantity) }))
+      : []
   } catch {
     return []
   }
@@ -144,13 +161,16 @@ export function ItemsTab() {
   const [addOpen, setAddOpen] = useState(false)
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null)
   const [sellPrice, setSellPrice] = useState("")
+  const [sellQuantity, setSellQuantity] = useState("0")
   const [deleteItem, setDeleteItem] = useState<InventoryItem | null>(null)
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [editName, setEditName] = useState("")
   const [editPrice, setEditPrice] = useState("")
+  const [editQuantity, setEditQuantity] = useState("0")
   const [editErrorId, setEditErrorId] = useState<number | null>(null)
   const [newName, setNewName] = useState("")
   const [newPrice, setNewPrice] = useState("")
+  const [newQuantity, setNewQuantity] = useState("0")
   const [newImage, setNewImage] = useState<string>("")
   const [addError, setAddError] = useState(false)
   const pasteRef = useRef<HTMLDivElement>(null)
@@ -159,6 +179,7 @@ export function ItemsTab() {
     heldLabel: string
     saleAmount: number
     purchasePrice: number
+    quantity: number
     savedToCalculator: boolean
   } | null>(null)
 
@@ -261,6 +282,7 @@ export function ItemsTab() {
   const resetAddForm = () => {
     setNewName("")
     setNewPrice("")
+    setNewQuantity("0")
     setNewImage("")
     setAddError(false)
   }
@@ -281,9 +303,10 @@ export function ItemsTab() {
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
     const price = parseFloat(newPrice.replace(",", "."))
+    const quantity = parseQuantityInput(newQuantity)
     const name = newName.trim()
     const writeToCalculator = calcMode === "with"
-    if (!name || Number.isNaN(price) || price <= 0) {
+    if (!name || Number.isNaN(price) || price <= 0 || quantity === null) {
       setAddError(true)
       setTimeout(() => setAddError(false), 500)
       return
@@ -295,7 +318,8 @@ export function ItemsTab() {
         name,
         price,
         newImage || "",
-        writeToCalculator
+        writeToCalculator,
+        quantity
       )
       if ((res as any).ok && (res as any).item) {
         const it = (res as any).item
@@ -303,6 +327,7 @@ export function ItemsTab() {
           id: Number(it.id),
           name: String(it.name),
           purchasePrice: Number(it.purchasePrice),
+          quantity: normalizeQuantity(it.quantity),
           imageDataUrl: String(it.imageDataUrl ?? ""),
           purchasedAt: String(it.purchasedAt),
           purchaseTxId: Number(it.purchaseTxId),
@@ -328,6 +353,7 @@ export function ItemsTab() {
       id: itemId,
       name,
       purchasePrice: price,
+      quantity,
       imageDataUrl: newImage,
       purchasedAt,
       purchaseTxId,
@@ -336,7 +362,7 @@ export function ItemsTab() {
       const tx = {
         id: purchaseTxId,
         amount: -Math.abs(price),
-        comment: `Покупка предмета: ${name}`,
+        comment: `Покупка предмета: ${name} · Количество: ${quantity}`,
         createdAt: purchasedAt,
       }
       persistWebTransactions([tx, ...loadWebTransactions()])
@@ -381,6 +407,7 @@ export function ItemsTab() {
     setEditingItemId(item.id)
     setEditName(item.name)
     setEditPrice(String(item.purchasePrice))
+    setEditQuantity(String(item.quantity))
     setEditErrorId(null)
   }
 
@@ -388,6 +415,7 @@ export function ItemsTab() {
     setEditingItemId(null)
     setEditName("")
     setEditPrice("")
+    setEditQuantity("0")
     setEditErrorId(null)
   }
 
@@ -395,21 +423,29 @@ export function ItemsTab() {
     if (editingItemId !== item.id) return
     const name = editName.trim()
     const price = parseFloat(editPrice.replace(",", "."))
-    if (!name || Number.isNaN(price) || price <= 0) {
+    const quantity = parseQuantityInput(editQuantity)
+    if (!name || Number.isNaN(price) || price <= 0 || quantity === null) {
       setEditErrorId(item.id)
       setTimeout(() => setEditErrorId(null), 500)
       return
     }
 
-    const hasChanged = name !== item.name || price !== item.purchasePrice
+    const hasChanged =
+      name !== item.name || price !== item.purchasePrice || quantity !== item.quantity
     if (!hasChanged) {
       cancelEditing()
       return
     }
 
-    let updated: InventoryItem = { ...item, name, purchasePrice: price }
+    let updated: InventoryItem = { ...item, name, purchasePrice: price, quantity }
     if (isDesktop()) {
-      const res = await callDesktop<{ ok: boolean; item?: any }>("item_update", item.id, name, price)
+      const res = await callDesktop<{ ok: boolean; item?: any }>(
+        "item_update",
+        item.id,
+        name,
+        price,
+        quantity
+      )
       if (!(res as any).ok || !(res as any).item) {
         setEditErrorId(item.id)
         setTimeout(() => setEditErrorId(null), 500)
@@ -420,6 +456,7 @@ export function ItemsTab() {
         id: Number(it.id),
         name: String(it.name),
         purchasePrice: Number(it.purchasePrice),
+        quantity: normalizeQuantity(it.quantity),
         imageDataUrl: String(it.imageDataUrl ?? ""),
         purchasedAt: String(it.purchasedAt),
         purchaseTxId: Number(it.purchaseTxId),
@@ -427,7 +464,11 @@ export function ItemsTab() {
     } else if (item.purchaseTxId > 0) {
       const nextTx = loadWebTransactions().map((transaction) =>
         transaction.id === item.purchaseTxId
-          ? { ...transaction, amount: -Math.abs(price), comment: `Покупка предмета: ${name}` }
+          ? {
+              ...transaction,
+              amount: -Math.abs(price),
+              comment: `Покупка предмета: ${name} · Количество: ${quantity}`,
+            }
           : transaction
       )
       persistWebTransactions(nextTx)
@@ -446,8 +487,9 @@ export function ItemsTab() {
     e.preventDefault()
     if (!sellItem) return
     const sale = parseFloat(sellPrice.replace(",", "."))
+    const quantity = parseQuantityInput(sellQuantity)
     const writeToCalculator = calcMode === "with"
-    if (Number.isNaN(sale) || sale <= 0) return
+    if (Number.isNaN(sale) || sale <= 0 || quantity === null) return
 
     const name = sellItem.name
     const heldLabel = formatHeldDuration(sellItem.purchasedAt)
@@ -457,7 +499,7 @@ export function ItemsTab() {
         const res = await callDesktop<{ ok: boolean }>(
           "transaction_add",
           sale,
-          `Продажа предмета: ${name}`
+          `Продажа предмета: ${name} · Количество: ${quantity}`
         )
         if (!(res as any).ok) return
       }
@@ -467,7 +509,7 @@ export function ItemsTab() {
         const tx = {
           id: Date.now(),
           amount: sale,
-          comment: `Продажа предмета: ${name}`,
+          comment: `Продажа предмета: ${name} · Количество: ${quantity}`,
           createdAt: new Date().toISOString(),
         }
         persistWebTransactions([tx, ...loadWebTransactions()])
@@ -481,10 +523,12 @@ export function ItemsTab() {
     })
     setSellItem(null)
     setSellPrice("")
+    setSellQuantity("0")
     setSellOverlay({
       heldLabel,
       saleAmount: sale,
       purchasePrice: sellItem.purchasePrice,
+      quantity,
       savedToCalculator: writeToCalculator,
     })
     if (writeToCalculator) {
@@ -494,11 +538,15 @@ export function ItemsTab() {
     window.setTimeout(() => setSellOverlay(null), 3200)
   }
 
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
+
   return (
     <div className="animate-in fade-in duration-300 h-full flex flex-col min-h-0">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="text-sm text-[#9b9b95]">
-          {items.length > 0 ? `Всего предметов: ${items.length}` : "Инвентарь пока пуст"}
+          {items.length > 0
+            ? `Позиций: ${items.length} · Количество: ${totalQuantity}`
+            : "Инвентарь пока пуст"}
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center rounded-lg border border-[var(--tor-border)] bg-[var(--tor-bg-card)] p-1">
@@ -623,7 +671,7 @@ export function ItemsTab() {
                     <div className="flex flex-1 flex-col p-4">
                       {isEditing ? (
                         <div
-                          className="space-y-2"
+                          className="grid grid-cols-[minmax(0,1fr)_104px] gap-2"
                           onClick={(ev) => ev.stopPropagation()}
                           onBlur={(ev) => {
                             const nextFocus = ev.relatedTarget as Node | null
@@ -647,7 +695,7 @@ export function ItemsTab() {
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
                             onFocus={(e) => e.target.select()}
-                            className={`h-9 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] font-semibold ${
+                            className={`col-span-2 h-9 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] font-semibold ${
                               editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
                             }`}
                           />
@@ -660,11 +708,28 @@ export function ItemsTab() {
                               editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
                             }`}
                           />
+                          <Input
+                            value={editQuantity}
+                            onChange={(e) => setEditQuantity(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            step={1}
+                            aria-label="Количество"
+                            title="Количество"
+                            className={`h-9 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] tabular-nums ${
+                              editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
+                            }`}
+                          />
                         </div>
                       ) : (
                         <>
                           <div className="font-semibold text-[#f2f0ec] line-clamp-2 mb-1">{item.name}</div>
                           <div className="text-[#d56a72] font-semibold">{formatMoney(item.purchasePrice)}</div>
+                          <div className="mt-1 text-sm tabular-nums text-[#9b9b95]">
+                            Количество: <span className="font-medium text-[#f2f0ec]">{item.quantity}</span>
+                          </div>
                           <div className="text-xs text-[#767a80] mt-2">Нажмите карточку для редактирования</div>
                         </>
                       )}
@@ -675,6 +740,7 @@ export function ItemsTab() {
                           onClick={() => {
                             setSellItem(item)
                             setSellPrice("")
+                            setSellQuantity(String(item.quantity))
                           }}
                           className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#c84b55] px-3 py-2 text-sm font-medium text-white hover:bg-[#d55c66]"
                         >
@@ -738,7 +804,7 @@ export function ItemsTab() {
                     <div className="min-w-0 flex-1">
                       {isEditing ? (
                         <div
-                          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_140px]"
+                          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_140px_104px]"
                           onClick={(ev) => ev.stopPropagation()}
                           onBlur={(ev) => {
                             const nextFocus = ev.relatedTarget as Node | null
@@ -775,11 +841,30 @@ export function ItemsTab() {
                               editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
                             }`}
                           />
+                          <Input
+                            value={editQuantity}
+                            onChange={(e) => setEditQuantity(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            step={1}
+                            aria-label="Количество"
+                            title="Количество"
+                            className={`h-9 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] tabular-nums ${
+                              editErrorId === item.id ? "border-[#c84b55] animate-shake" : ""
+                            }`}
+                          />
                         </div>
                       ) : (
                         <>
                           <div className="font-semibold text-[#f2f0ec] truncate">{item.name}</div>
-                          <div className="text-[#d56a72] font-semibold">{formatMoney(item.purchasePrice)}</div>
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                            <div className="text-[#d56a72] font-semibold">{formatMoney(item.purchasePrice)}</div>
+                            <div className="text-xs tabular-nums text-[#9b9b95]">
+                              Количество: <span className="font-medium text-[#f2f0ec]">{item.quantity}</span>
+                            </div>
+                          </div>
                         </>
                       )}
                       <div className="text-xs text-[#767a80] mt-1">{formatDateTime(item.purchasedAt)}</div>
@@ -792,6 +877,7 @@ export function ItemsTab() {
                         onClick={() => {
                           setSellItem(item)
                           setSellPrice("")
+                          setSellQuantity(String(item.quantity))
                         }}
                         className="p-2 rounded-lg bg-[#c84b55] text-white hover:bg-[#d55c66]"
                       >
@@ -835,17 +921,34 @@ export function ItemsTab() {
                 className="mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec]"
               />
             </div>
-            <div>
-              <Label htmlFor="item-price" className="text-[#9b9b95]">
-                Цена покупки ($)
-              </Label>
-              <Input
-                id="item-price"
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                placeholder="15000"
-                className={`mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] ${addError ? "border-[#c84b55] animate-shake" : ""}`}
-              />
+            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+              <div>
+                <Label htmlFor="item-price" className="text-[#9b9b95]">
+                  Цена покупки ($)
+                </Label>
+                <Input
+                  id="item-price"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  placeholder="15000"
+                  className={`mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] ${addError ? "border-[#c84b55] animate-shake" : ""}`}
+                />
+              </div>
+              <div>
+                <Label htmlFor="item-quantity" className="text-[#9b9b95]">
+                  Количество
+                </Label>
+                <Input
+                  id="item-quantity"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={1}
+                  value={newQuantity}
+                  onChange={(e) => setNewQuantity(e.target.value)}
+                  className={`mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] tabular-nums ${addError ? "border-[#c84b55] animate-shake" : ""}`}
+                />
+              </div>
             </div>
             <div>
               <Label className="text-[#9b9b95]">Фото</Label>
@@ -903,17 +1006,36 @@ export function ItemsTab() {
           </DialogHeader>
           <form onSubmit={confirmSell} className="space-y-4">
             <div>
-              <Label htmlFor="sell-price" className="text-[#9b9b95]">
-                Цена продажи ($)
-              </Label>
-              <Input
-                id="sell-price"
-                autoFocus
-                value={sellPrice}
-                onChange={(e) => setSellPrice(e.target.value)}
-                placeholder="Сколько получили"
-                className="mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec]"
-              />
+              <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+                <div>
+                  <Label htmlFor="sell-price" className="text-[#9b9b95]">
+                    Цена продажи ($)
+                  </Label>
+                  <Input
+                    id="sell-price"
+                    autoFocus
+                    value={sellPrice}
+                    onChange={(e) => setSellPrice(e.target.value)}
+                    placeholder="Сколько получили"
+                    className="mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec]"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sell-quantity" className="text-[#9b9b95]">
+                    Количество
+                  </Label>
+                  <Input
+                    id="sell-quantity"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    value={sellQuantity}
+                    onChange={(e) => setSellQuantity(e.target.value)}
+                    className="mt-1.5 bg-[var(--tor-bg-input)] border-[var(--tor-border)] text-[#f2f0ec] tabular-nums"
+                  />
+                </div>
+              </div>
               {sellItem && (
                 <p className="text-xs text-[#767a80] mt-2">
                   {calcMode === "with"
@@ -978,6 +1100,9 @@ export function ItemsTab() {
             </div>
             <h3 className="text-2xl font-bold text-[#f2f0ec] mb-2">Продано!</h3>
             <p className="text-[#c84b55] text-lg font-semibold mb-1">{formatMoney(sellOverlay.saleAmount)}</p>
+            <p className="mb-2 text-sm tabular-nums text-[#9b9b95]">
+              Количество: <span className="font-semibold text-[#f2f0ec]">{sellOverlay.quantity}</span>
+            </p>
             <p className="text-[#9b9b95] text-sm mb-4">
               Предмет был у вас: <span className="text-[#f2f0ec] font-medium">{sellOverlay.heldLabel}</span>
             </p>
