@@ -1,6 +1,6 @@
 "use client"
 
-import { Banknote, Check, Keyboard, Package, Sparkles, Volume2 } from "lucide-react"
+import { Check, Keyboard, MousePointer2, Sparkles } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -12,24 +12,14 @@ import {
 
 const releaseItems = [
   {
-    icon: Volume2,
-    title: "Звуки готовы сразу",
-    text: "Выбранные звуки и громкость загружаются при старте — больше не нужно открывать настройки и запускать предпрослушивание.",
-  },
-  {
-    icon: Package,
-    title: "Количество имущества",
-    text: "У каждой позиции появилось количество. Если его не указывать, сохраняется ноль.",
-  },
-  {
-    icon: Banknote,
-    title: "Количество при продаже",
-    text: "В окне продажи можно указать проданное количество — оно сохранится в описании сделки.",
+    icon: MousePointer2,
+    title: "Свободный курсор после игры",
+    text: "При появлении TorCalculator освобождает курсор от игрового захвата, поэтому окно снова можно нормально перемещать мышью.",
   },
   {
     icon: Keyboard,
-    title: "Вызов поверх игры",
-    text: "Двойное нажатие клавиши \\ показывает приложение поверх игры, а повторное — сворачивает обратно. Окно можно свободно перемещать мышью.",
+    title: "Показать и свернуть одной клавишей",
+    text: "Настроенная комбинация показывает приложение поверх игры, а повторное нажатие сворачивает его обратно.",
   },
 ]
 
@@ -54,13 +44,13 @@ export function WhatsNewDialog({
           </div>
           <DialogHeader className="text-left">
             <div className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--tor-accent-strong)]">
-              Обновление 0.0.6
+              Обновление 0.0.7
             </div>
             <DialogTitle className="text-2xl leading-tight tracking-[-0.025em]">
               Что нового в TorCalculator
             </DialogTitle>
             <DialogDescription className="text-[#9b9b95]">
-              Звуки с первого действия и точный учёт количества имущества.
+              Быстрый вызов теперь работает как удобный переключатель поверх игры.
             </DialogDescription>
           </DialogHeader>
         </div>

@@ -345,7 +345,7 @@ export function SettingsTab({ onClearData }: SettingsTabProps) {
               </div>
               <div className="flex justify-between items-center py-3 border-b border-[var(--tor-border)]">
                 <span className="text-[#9b9b95]">Версия</span>
-                <span className="text-[#f2f0ec] font-medium">0.0.6</span>
+                <span className="text-[#f2f0ec] font-medium">0.0.7</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-[var(--tor-border)]">
                 <span className="text-[#9b9b95]">Разработчик</span>
